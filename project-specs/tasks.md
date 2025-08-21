@@ -41,7 +41,7 @@
     - Test with sample RSS feeds
     - _Requirements: 2.1, 2.2, 2.5_
 
-- [ ] 4. Implement deduplication service
+- [x] 4. Implement deduplication service
   - Create DeduplicationService class
   - Implement similarity scoring using title and content hashing
   - Write merging logic for duplicate events from different sources
