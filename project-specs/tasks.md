@@ -48,26 +48,26 @@
   - Add unit tests with sample duplicate events
   - _Requirements: 2.4_
 
-- [ ] 5. Build event analyzer with Vercel AI SDK
-  - [ ] 5.1 Create analyzer core
+- [x] 5. Build event analyzer with Vercel AI SDK
+  - [x] 5.1 Create analyzer core
     - Implement EventAnalyzer class with Vercel AI SDK
     - Write prompt template for event analysis
     - Define structured output schema using Zod
     - _Requirements: 3.1, 7.2_
-  - [ ] 5.2 Implement scoring logic
+  - [x] 5.2 Implement scoring logic
     - Create significance scoring algorithm
     - Implement multi-dimensional scoring (breakthrough, impact, adoption, novelty)
     - Write ranking and selection logic for top 3 events
     - Add unit tests with mock AI responses
     - _Requirements: 3.2, 3.3, 3.4_
 
-- [ ] 6. Create GitHub integration layer
-  - [ ] 6.1 Implement timeline reader
+- [x] 6. Create GitHub integration layer
+  - [x] 6.1 Implement timeline reader
     - Create TimelineReader class using Octokit
     - Write logic to fetch current timeline-events.json
     - Parse and validate existing events
     - _Requirements: 4.2, 4.3_
-  - [ ] 6.2 Build PR creator
+  - [x] 6.2 Build PR creator
     - Implement GitHubManager class
     - Write branch creation logic with week-based naming
     - Create file update logic maintaining chronological order
