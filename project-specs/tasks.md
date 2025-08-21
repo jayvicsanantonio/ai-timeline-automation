@@ -21,20 +21,20 @@
     - Write source reliability enum
     - _Requirements: 2.1, 2.3_
 
-- [ ] 3. Build news collector implementations
-  - [ ] 3.1 Create HackerNews collector
+- [x] 3. Build news collector implementations
+  - [x] 3.1 Create HackerNews collector
     - Implement HackerNewsCollector class extending NewsSource
     - Write fetch logic for top AI stories from past week
     - Add score threshold filtering (>100 points)
     - Write unit tests for data parsing
     - _Requirements: 2.1, 2.2_
-  - [ ] 3.2 Create ArXiv collector
+  - [x] 3.2 Create ArXiv collector
     - Implement ArXivCollector with RSS parsing
     - Filter for cs.AI and cs.LG categories
     - Parse abstracts and metadata
     - Write unit tests for RSS parsing
     - _Requirements: 2.1, 2.2_
-  - [ ] 3.3 Create RSS feed collector
+  - [x] 3.3 Create RSS feed collector
     - Implement generic RSSCollector class
     - Add configuration for multiple tech blog feeds
     - Write date filtering logic for past 7 days
