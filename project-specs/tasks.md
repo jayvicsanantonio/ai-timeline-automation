@@ -9,13 +9,13 @@
   - Copy project-specs/ai-news-automation folder into new repo for documentation
   - _Requirements: 6.1, 6.2_
 
-- [ ] 2. Implement base types and interfaces
-  - [ ] 2.1 Create event type definitions
+- [x] 2. Implement base types and interfaces
+  - [x] 2.1 Create event type definitions
     - Write TypeScript interfaces for RawEvent, AnalyzedEvent, TimelineEntry
     - Create Zod schemas for validation
     - Add type exports in src/types/index.ts
     - _Requirements: 4.1, 4.4_
-  - [ ] 2.2 Define news source interfaces
+  - [x] 2.2 Define news source interfaces
     - Create NewsSource abstract class with fetchEvents method
     - Implement NewsSourceConfig schema
     - Write source reliability enum
