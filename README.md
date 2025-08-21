@@ -1,4 +1,4 @@
-# AI News Automation
+# AI Timeline Automation
 
 Automated system for gathering weekly AI-related news and events, analyzing their significance, and maintaining a curated timeline of major AI developments.
 
@@ -29,7 +29,7 @@ The system consists of three main layers:
 
 ### Prerequisites
 
-- Node.js 18+ 
+- Node.js 18+
 - GitHub account with personal access token
 - OpenAI API key (or alternative LLM provider)
 
