@@ -78,10 +78,14 @@ export interface AnalyzedEvent {
   category: EventCategory;
   /** List of source URLs */
   sources: string[];
+  /** Primary URL for the event */
+  url?: string;
   /** Overall impact score (0-10) */
   impactScore: number;
   /** Detailed significance breakdown */
   significance: SignificanceScores;
+  /** Additional metadata from analysis */
+  metadata?: Record<string, any>;
 }
 
 /**
@@ -104,8 +108,10 @@ export const AnalyzedEventSchema = z.object({
   description: z.string().min(1).max(1000),
   category: z.enum(['research', 'product', 'regulation', 'industry']),
   sources: z.array(z.string().url()),
+  url: z.string().url().optional(),
   impactScore: z.number().min(0).max(10),
   significance: SignificanceScoresSchema,
+  metadata: z.record(z.any()).optional(),
 });
 
 // ============================================================================

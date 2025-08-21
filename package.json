@@ -23,6 +23,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@ai-sdk/openai": "^2.0.19",
     "@octokit/rest": "^20.0.2",
     "ai": "^3.0.0",
     "axios": "^1.6.5",
