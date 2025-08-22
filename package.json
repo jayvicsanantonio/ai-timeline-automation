@@ -6,12 +6,20 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/index.ts",
+    "update": "node dist/index.js",
+    "start": "npm run update",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "prebuild": "npm run clean",
+    "prepare": "npm run build"
+  },
+  "bin": {
+    "ai-timeline-update": "./dist/index.js"
   },
   "keywords": [
     "ai",
@@ -23,17 +31,20 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@ai-sdk/openai": "^2.0.19",
     "@octokit/rest": "^20.0.2",
     "ai": "^3.0.0",
     "axios": "^1.6.5",
     "dotenv": "^16.3.1",
     "openai": "^4.52.0",
     "rss-parser": "^3.13.0",
+    "xml2js": "^0.6.2",
     "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/jest": "^29.5.11",
     "@types/node": "^20.10.6",
+    "@types/xml2js": "^0.4.14",
     "@typescript-eslint/eslint-plugin": "^6.17.0",
     "@typescript-eslint/parser": "^6.17.0",
     "eslint": "^8.56.0",
