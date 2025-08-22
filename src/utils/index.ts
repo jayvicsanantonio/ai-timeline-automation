@@ -31,3 +31,27 @@ export {
   AggregateError,
   ErrorBoundary
 } from './errors';
+
+export {
+  Logger,
+  LogLevel,
+  LogContext,
+  LogEntry,
+  createLogger,
+  getLogger
+} from './logger';
+
+export {
+  MetricsCollector,
+  EventMetrics,
+  ApiMetrics,
+  SelectionMetrics,
+  ExecutionMetrics,
+  getMetricsCollector,
+  trackEventCollection,
+  trackApiCall,
+  trackSelection,
+  trackError,
+  getMetricsSummary,
+  logMetricsSummary
+} from './metrics';
