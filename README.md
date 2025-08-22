@@ -1,5 +1,9 @@
 # AI Timeline Automation System
 
+[![Weekly AI Timeline Update](https://github.com/jayvicsanantonio/ai-timeline-automation/actions/workflows/weekly-update.yml/badge.svg)](https://github.com/jayvicsanantonio/ai-timeline-automation/actions/workflows/weekly-update.yml)
+[![CI](https://github.com/jayvicsanantonio/ai-timeline-automation/actions/workflows/ci.yml/badge.svg)](https://github.com/jayvicsanantonio/ai-timeline-automation/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 🤖 **Automated AI news gathering and timeline update system** that collects, analyzes, and curates significant AI developments from multiple sources into a structured timeline.
 
 ## 📋 Table of Contents
@@ -276,7 +280,7 @@ The project includes a complete GitHub Actions workflow:
 2. **Configure Secrets** in repository settings:
    ```
    OPENAI_API_KEY=sk-...
-   GH_PAT=ghp_...  # GitHub Personal Access Token
+   GIT_TOKEN=ghp_...  # GitHub Personal Access Token
    ```
 3. **Configure Variables**:
    ```
