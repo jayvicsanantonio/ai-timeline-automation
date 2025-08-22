@@ -82,7 +82,7 @@ jobs:
         env:
           # Required secrets
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          GIT_TOKEN: ${{ secrets.GH_PAT || secrets.GIT_TOKEN }}
+          GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
 
           # Configuration
           TIMELINE_REPO: ${{ vars.TIMELINE_REPO }}
