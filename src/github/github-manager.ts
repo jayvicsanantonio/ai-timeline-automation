@@ -3,7 +3,11 @@
  */
 
 import { Octokit } from '@octokit/rest';
-import { TimelineEntry, AnalyzedEvent, toTimelineEntry } from '../types';
+import {
+  TimelineEntry,
+  AnalyzedEvent,
+  toTimelineEntry,
+} from '../types';
 import { TimelineReader, TimelineData } from './timeline-reader';
 
 /**
@@ -52,12 +56,15 @@ export class GitHubManager {
       repo: config.repo,
       filePath: config.filePath || 'data/timeline-events.json',
       baseBranch: config.baseBranch || 'main',
-      token: config.token || process.env.GITHUB_TOKEN || '',
-      defaultLabels: config.defaultLabels || ['automated', 'weekly-update']
+      token: config.token || process.env.GIT_TOKEN || '',
+      defaultLabels: config.defaultLabels || [
+        'automated',
+        'weekly-update',
+      ],
     };
 
     this.octokit = new Octokit({
-      auth: this.config.token
+      auth: this.config.token,
     });
 
     this.timelineReader = new TimelineReader({
@@ -65,7 +72,7 @@ export class GitHubManager {
       repo: this.config.repo,
       filePath: this.config.filePath,
       branch: this.config.baseBranch,
-      token: this.config.token
+      token: this.config.token,
     });
   }
 
@@ -79,7 +86,7 @@ export class GitHubManager {
   ): Promise<PullRequestResult> {
     // Convert to timeline entries
     const timelineEntries = events.map(toTimelineEntry);
-    
+
     if (timelineEntries.length === 0) {
       throw new Error('No events to add to timeline');
     }
@@ -88,8 +95,13 @@ export class GitHubManager {
     const now = new Date();
     if (!weekNumber || !year) {
       const startOfYear = new Date(now.getFullYear(), 0, 1);
-      const daysSinceStart = Math.floor((now.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24));
-      weekNumber = weekNumber || Math.ceil((daysSinceStart + startOfYear.getDay() + 1) / 7);
+      const daysSinceStart = Math.floor(
+        (now.getTime() - startOfYear.getTime()) /
+          (1000 * 60 * 60 * 24)
+      );
+      weekNumber =
+        weekNumber ||
+        Math.ceil((daysSinceStart + startOfYear.getDay() + 1) / 7);
       year = year || now.getFullYear();
     }
 
@@ -106,25 +118,36 @@ export class GitHubManager {
           number: existingPR.number,
           url: existingPR.html_url,
           branch: branchName,
-          created: false
+          created: false,
         };
       }
 
       // Fetch current timeline
-      const currentTimeline = await this.timelineReader.fetchTimeline();
-      
+      const currentTimeline =
+        await this.timelineReader.fetchTimeline();
+
       // Validate new events
-      const validation = this.timelineReader.validateNewEvents(timelineEntries, currentTimeline.events);
+      const validation = this.timelineReader.validateNewEvents(
+        timelineEntries,
+        currentTimeline.events
+      );
       if (!validation.valid) {
-        throw new Error(`Event validation failed: ${validation.conflicts.join(', ')}`);
+        throw new Error(
+          `Event validation failed: ${validation.conflicts.join(
+            ', '
+          )}`
+        );
       }
-      
+
       if (validation.warnings.length > 0) {
         console.warn('Validation warnings:', validation.warnings);
       }
 
       // Filter out any events that already exist
-      const newEvents = this.timelineReader.filterNewEvents(timelineEntries, currentTimeline.events);
+      const newEvents = this.timelineReader.filterNewEvents(
+        timelineEntries,
+        currentTimeline.events
+      );
       if (newEvents.length === 0) {
         console.log('All events already exist in timeline');
         throw new Error('No new events to add');
@@ -141,7 +164,11 @@ export class GitHubManager {
       );
 
       // Generate PR description
-      const description = this.generatePRDescription(events, newEvents, validation.warnings);
+      const description = this.generatePRDescription(
+        events,
+        newEvents,
+        validation.warnings
+      );
 
       // Create pull request
       const pr = await this.createPullRequest(
@@ -153,13 +180,15 @@ export class GitHubManager {
       // Add labels
       await this.addLabels(pr.number, events);
 
-      console.log(`Successfully created PR #${pr.number}: ${pr.html_url}`);
-      
+      console.log(
+        `Successfully created PR #${pr.number}: ${pr.html_url}`
+      );
+
       return {
         number: pr.number,
         url: pr.html_url,
         branch: branchName,
-        created: true
+        created: true,
       };
     } catch (error) {
       console.error('Error creating timeline update PR:', error);
@@ -170,8 +199,14 @@ export class GitHubManager {
   /**
    * Generate branch name for the update
    */
-  private generateBranchName(year: number, weekNumber: number): string {
-    return `auto-update/week-${year}-${String(weekNumber).padStart(2, '0')}`;
+  private generateBranchName(
+    year: number,
+    weekNumber: number
+  ): string {
+    return `auto-update/week-${year}-${String(weekNumber).padStart(
+      2,
+      '0'
+    )}`;
   }
 
   /**
@@ -183,7 +218,7 @@ export class GitHubManager {
         owner: this.config.owner,
         repo: this.config.repo,
         head: `${this.config.owner}:${branchName}`,
-        state: 'open'
+        state: 'open',
       });
 
       return prs.length > 0 ? prs[0] : null;
@@ -199,11 +234,13 @@ export class GitHubManager {
   async createOrUpdateBranch(branchName: string): Promise<void> {
     try {
       // Get the SHA of the base branch
-      const { data: baseBranch } = await this.octokit.repos.getBranch({
-        owner: this.config.owner,
-        repo: this.config.repo,
-        branch: this.config.baseBranch
-      });
+      const { data: baseBranch } = await this.octokit.repos.getBranch(
+        {
+          owner: this.config.owner,
+          repo: this.config.repo,
+          branch: this.config.baseBranch,
+        }
+      );
 
       const baseSha = baseBranch.commit.sha;
 
@@ -213,7 +250,7 @@ export class GitHubManager {
           owner: this.config.owner,
           repo: this.config.repo,
           ref: `refs/heads/${branchName}`,
-          sha: baseSha
+          sha: baseSha,
         });
         console.log(`Created new branch: ${branchName}`);
       } catch (error: any) {
@@ -224,7 +261,7 @@ export class GitHubManager {
             repo: this.config.repo,
             ref: `heads/${branchName}`,
             sha: baseSha,
-            force: true
+            force: true,
           });
           console.log(`Updated existing branch: ${branchName}`);
         } else {
@@ -246,14 +283,16 @@ export class GitHubManager {
     branchName: string
   ): Promise<string> {
     // Merge and sort events chronologically
-    const allEvents = [...currentTimeline.events, ...newEvents]
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const allEvents = [...currentTimeline.events, ...newEvents].sort(
+      (a, b) =>
+        new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
 
     // Create updated content with the new structure
     const updatedData = {
       lastUpdated: new Date().toISOString(),
       totalEntries: allEvents.length,
-      entries: allEvents
+      entries: allEvents,
     };
 
     const updatedContent = JSON.stringify(updatedData, null, 2);
@@ -264,13 +303,17 @@ export class GitHubManager {
         owner: this.config.owner,
         repo: this.config.repo,
         path: this.config.filePath,
-        message: `Add ${newEvents.length} new AI timeline event${newEvents.length > 1 ? 's' : ''}`,
+        message: `Add ${newEvents.length} new AI timeline event${
+          newEvents.length > 1 ? 's' : ''
+        }`,
         content: Buffer.from(updatedContent).toString('base64'),
         sha: currentTimeline.sha || undefined,
-        branch: branchName
+        branch: branchName,
       });
 
-      console.log(`Updated timeline file with ${newEvents.length} new events`);
+      console.log(
+        `Updated timeline file with ${newEvents.length} new events`
+      );
       return updatedContent;
     } catch (error) {
       console.error('Error updating timeline file:', error);
@@ -291,7 +334,7 @@ export class GitHubManager {
         title,
         body,
         head: branchName,
-        base: this.config.baseBranch
+        base: this.config.baseBranch,
       });
 
       return pr;
@@ -310,51 +353,70 @@ export class GitHubManager {
     warnings: string[]
   ): string {
     const lines: string[] = [];
-    
+
     lines.push('## 🤖 Weekly AI Timeline Update\n');
-    lines.push(`This automated PR adds ${addedEntries.length} significant AI developments to the timeline.\n`);
-    
+    lines.push(
+      `This automated PR adds ${addedEntries.length} significant AI developments to the timeline.\n`
+    );
+
     // Summary statistics
     lines.push('### 📊 Summary');
     lines.push(`- **Events analyzed**: ${analyzedEvents.length}`);
     lines.push(`- **Events added**: ${addedEntries.length}`);
-    lines.push(`- **Date range**: ${this.getDateRange(addedEntries)}`);
-    
+    lines.push(
+      `- **Date range**: ${this.getDateRange(addedEntries)}`
+    );
+
     // Categories breakdown
     const categories = this.getCategoryBreakdown(addedEntries);
-    lines.push(`- **Categories**: ${Object.entries(categories).map(([cat, count]) => `${cat} (${count})`).join(', ')}\n`);
-    
+    lines.push(
+      `- **Categories**: ${Object.entries(categories)
+        .map(([cat, count]) => `${cat} (${count})`)
+        .join(', ')}\n`
+    );
+
     // Events details
     lines.push('### 📝 Events Added\n');
     analyzedEvents.forEach((event, index) => {
-      const entry = addedEntries.find(e => e.id === event.id);
+      const entry = addedEntries.find((e) => e.id === event.id);
       if (!entry) return;
-      
+
       lines.push(`#### ${index + 1}. ${event.title}`);
-      lines.push(`- **Date**: ${new Date(event.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`);
+      lines.push(
+        `- **Date**: ${new Date(event.date).toLocaleDateString(
+          'en-US',
+          { month: 'long', day: 'numeric', year: 'numeric' }
+        )}`
+      );
       lines.push(`- **Category**: \`${event.category}\``);
       lines.push(`- **Impact Score**: ${event.impactScore}/10`);
-      
+
       // Significance breakdown
       if (event.significance) {
         lines.push('- **Significance**:');
-        lines.push(`  - Technological Breakthrough: ${event.significance.technologicalBreakthrough}/10`);
-        lines.push(`  - Industry Impact: ${event.significance.industryImpact}/10`);
-        lines.push(`  - Adoption Scale: ${event.significance.adoptionScale}/10`);
+        lines.push(
+          `  - Technological Breakthrough: ${event.significance.technologicalBreakthrough}/10`
+        );
+        lines.push(
+          `  - Industry Impact: ${event.significance.industryImpact}/10`
+        );
+        lines.push(
+          `  - Adoption Scale: ${event.significance.adoptionScale}/10`
+        );
         lines.push(`  - Novelty: ${event.significance.novelty}/10`);
       }
-      
+
       lines.push(`\n${event.description}\n`);
-      
+
       if (event.sources && event.sources.length > 0) {
         lines.push('**Sources:**');
-        event.sources.forEach(source => {
+        event.sources.forEach((source) => {
           lines.push(`- ${source}`);
         });
         lines.push('');
       }
     });
-    
+
     // Selection criteria
     lines.push('### 🎯 Selection Criteria');
     lines.push('Events were selected based on:');
@@ -363,40 +425,42 @@ export class GitHubManager {
     lines.push('- Expected adoption scale');
     lines.push('- Novelty of the development');
     lines.push(`- Minimum significance threshold: 7.0/10\n`);
-    
+
     // Warnings if any
     if (warnings.length > 0) {
       lines.push('### ⚠️ Warnings');
-      warnings.forEach(warning => {
+      warnings.forEach((warning) => {
         lines.push(`- ${warning}`);
       });
       lines.push('');
     }
-    
+
     // Metadata
     lines.push('### 🔧 Metadata');
     lines.push('- **Generated by**: AI Timeline Automation');
     lines.push(`- **Timestamp**: ${new Date().toISOString()}`);
     lines.push('- **Type**: Automated weekly update');
-    
+
     return lines.join('\n');
   }
-
 
   /**
    * Add labels to the pull request
    */
-  private async addLabels(prNumber: number, events: AnalyzedEvent[]): Promise<void> {
+  private async addLabels(
+    prNumber: number,
+    events: AnalyzedEvent[]
+  ): Promise<void> {
     const labels = [...this.config.defaultLabels];
-    
+
     // Add category-specific labels
-    const categories = new Set(events.map(e => e.category));
-    categories.forEach(category => {
+    const categories = new Set(events.map((e) => e.category));
+    categories.forEach((category) => {
       labels.push(`category:${category}`);
     });
-    
+
     // Add impact level label
-    const maxImpact = Math.max(...events.map(e => e.impactScore));
+    const maxImpact = Math.max(...events.map((e) => e.impactScore));
     if (maxImpact >= 9) {
       labels.push('impact:critical');
     } else if (maxImpact >= 7) {
@@ -404,17 +468,22 @@ export class GitHubManager {
     } else {
       labels.push('impact:moderate');
     }
-    
+
     try {
       await this.octokit.issues.addLabels({
         owner: this.config.owner,
         repo: this.config.repo,
         issue_number: prNumber,
-        labels
+        labels,
       });
-      console.log(`Added labels to PR #${prNumber}: ${labels.join(', ')}`);
+      console.log(
+        `Added labels to PR #${prNumber}: ${labels.join(', ')}`
+      );
     } catch (error) {
-      console.warn('Error adding labels (they may not exist in the repo):', error);
+      console.warn(
+        'Error adding labels (they may not exist in the repo):',
+        error
+      );
     }
   }
 
@@ -423,34 +492,42 @@ export class GitHubManager {
    */
   private getDateRange(events: TimelineEntry[]): string {
     if (events.length === 0) return 'N/A';
-    
-    const dates = events.map(e => new Date(e.date));
-    const earliest = new Date(Math.min(...dates.map(d => d.getTime())));
-    const latest = new Date(Math.max(...dates.map(d => d.getTime())));
-    
-    const format = (date: Date) => date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
-    });
-    
+
+    const dates = events.map((e) => new Date(e.date));
+    const earliest = new Date(
+      Math.min(...dates.map((d) => d.getTime()))
+    );
+    const latest = new Date(
+      Math.max(...dates.map((d) => d.getTime()))
+    );
+
+    const format = (date: Date) =>
+      date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+
     if (earliest.getTime() === latest.getTime()) {
       return format(earliest);
     }
-    
+
     return `${format(earliest)} - ${format(latest)}`;
   }
 
   /**
    * Get category breakdown
    */
-  private getCategoryBreakdown(events: TimelineEntry[]): Record<string, number> {
+  private getCategoryBreakdown(
+    events: TimelineEntry[]
+  ): Record<string, number> {
     const breakdown: Record<string, number> = {};
-    
-    events.forEach(event => {
-      breakdown[event.category] = (breakdown[event.category] || 0) + 1;
+
+    events.forEach((event) => {
+      breakdown[event.category] =
+        (breakdown[event.category] || 0) + 1;
     });
-    
+
     return breakdown;
   }
 }

@@ -32,24 +32,28 @@ The AI Timeline Automation System automatically:
 ## ✨ Features
 
 ### 🔄 **Multi-Source Data Collection**
+
 - **HackerNews**: Top AI stories with score filtering
 - **ArXiv**: Latest AI/ML research papers (cs.AI, cs.LG categories)
 - **RSS Feeds**: Configurable tech blog feeds
 - **Extensible**: Easy to add new data sources
 
 ### 🧠 **AI-Powered Analysis**
+
 - **Significance Scoring**: Multi-dimensional analysis (technical, commercial, social impact)
 - **Content Categorization**: Automatic classification of developments
 - **Impact Assessment**: Breakthrough, development, research, adoption categories
 - **Smart Filtering**: Configurable significance thresholds
 
 ### 🔄 **Robust Automation**
+
 - **Error Handling**: Circuit breakers and retry mechanisms
 - **Rate Limiting**: Respectful API usage with backoff strategies
 - **Deduplication**: Advanced similarity detection across sources
 - **GitHub Integration**: Automated PR creation and timeline updates
 
 ### 📊 **Monitoring & Observability**
+
 - **Structured Logging**: JSON-formatted logs with correlation IDs
 - **Metrics Collection**: Comprehensive performance and success tracking
 - **Error Tracking**: Detailed error reporting and recovery metrics
@@ -70,7 +74,7 @@ The AI Timeline Automation System automatically:
 
 Core Components:
 ├── 📡 Collectors/     - Data source integrations
-├── 🔄 Analyzers/      - AI-powered content analysis  
+├── 🔄 Analyzers/      - AI-powered content analysis
 ├── 📝 GitHub/         - Repository and PR management
 ├── 🛠️ Utils/          - Error handling, retry, logging
 ├── 🎯 Orchestrator/   - Main workflow coordination
@@ -81,7 +85,7 @@ Core Components:
 
 ### Prerequisites
 
-- **Node.js** 18+ 
+- **Node.js** 18+
 - **npm** 8+
 - **AI Provider API Key**: Either OpenAI or OpenRouter (supports free models!)
 - **GitHub Token** with repository access
@@ -161,8 +165,8 @@ AI_MODEL=gpt-4o-mini                     # Optional, defaults to gpt-4o-mini
 OPENROUTER_API_KEY=sk-or-...            # OpenRouter API key
 AI_MODEL=moonshotai/kimi-k2:free        # Free model example
 
-# GitHub Integration  
-GITHUB_TOKEN=ghp_...                     # GitHub personal access token
+# GitHub Integration
+GIT_TOKEN=ghp_...                     # GitHub personal access token
 TIMELINE_REPO=username/ai-timeline       # Target repository (owner/repo)
 
 # Optional Configuration
@@ -290,12 +294,13 @@ The project includes a complete GitHub Actions workflow:
 **Problem**: `401 Unauthorized` or `403 Forbidden` responses
 
 **Solutions**:
+
 ```bash
 # Check API key validity
 curl -H "Authorization: Bearer $OPENAI_API_KEY" https://api.openai.com/v1/models
 
 # Verify GitHub token permissions
-curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/user
+curl -H "Authorization: token $GIT_TOKEN" https://api.github.com/user
 
 # Ensure token has required scopes:
 # - repo (for repository access)
@@ -307,6 +312,7 @@ curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/user
 **Problem**: `ConfigurationError: Missing required variables`
 
 **Solutions**:
+
 ```bash
 # Validate all required environment variables are set
 npm run typecheck
@@ -363,7 +369,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Questions or Issues?** 
+**Questions or Issues?**
 
 - 📧 Open an [issue](../../issues)
 - 💬 Start a [discussion](../../discussions)
