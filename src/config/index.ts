@@ -13,10 +13,15 @@ dotenv.config();
  * Environment variable schema
  */
 const EnvSchema = z.object({
-  // Required
-  OPENAI_API_KEY: z.string().min(1),
+  // Required - either OpenAI or OpenRouter API key
+  OPENAI_API_KEY: z.string().optional(),
+  OPENROUTER_API_KEY: z.string().optional(),
   GITHUB_TOKEN: z.string().min(1),
-  TIMELINE_REPO: z.string().regex(/^[^\/]+\/[^\/]+$/, 'Must be in format owner/repo'),
+  TIMELINE_REPO: z.string().regex(/^[^/]+\/[^/]+$/, 'Must be in format owner/repo'),
+  
+  // AI Provider settings
+  AI_PROVIDER: z.enum(['openai', 'openrouter']).default('openai'),
+  AI_MODEL: z.string().optional(), // e.g., 'gpt-4o-mini' or 'moonshotai/kimi-k2:free'
   
   // Optional with defaults
   MAX_EVENTS_PER_WEEK: z.string().transform(Number).pipe(z.number().min(1).max(10)).default('3'),
@@ -40,7 +45,9 @@ type EnvConfig = z.infer<typeof EnvSchema>;
  */
 export interface AppConfig {
   // Core settings
-  openaiApiKey: string;
+  aiProvider: 'openai' | 'openrouter';
+  aiApiKey: string;
+  aiModel: string;
   githubToken: string;
   timelineRepo: {
     owner: string;
@@ -106,12 +113,33 @@ class Configuration {
       
       this.env = result.data;
       
+      // Validate AI provider configuration
+      const provider = this.env.AI_PROVIDER;
+      let aiApiKey: string | undefined;
+      let aiModel: string;
+      
+      if (provider === 'openrouter') {
+        aiApiKey = this.env.OPENROUTER_API_KEY;
+        aiModel = this.env.AI_MODEL || 'moonshotai/kimi-k2:free';
+        if (!aiApiKey) {
+          throw new ConfigurationError('OPENROUTER_API_KEY is required when AI_PROVIDER=openrouter');
+        }
+      } else {
+        aiApiKey = this.env.OPENAI_API_KEY;
+        aiModel = this.env.AI_MODEL || 'gpt-4o-mini';
+        if (!aiApiKey) {
+          throw new ConfigurationError('OPENAI_API_KEY is required when AI_PROVIDER=openai');
+        }
+      }
+      
       // Parse timeline repo
       const [owner, repo] = this.env.TIMELINE_REPO.split('/');
       
       // Build configuration object
       this.config = {
-        openaiApiKey: this.env.OPENAI_API_KEY,
+        aiProvider: provider,
+        aiApiKey,
+        aiModel,
         githubToken: this.env.GITHUB_TOKEN,
         timelineRepo: {
           owner,
@@ -198,7 +226,7 @@ class Configuration {
     const config = this.load();
     const redacted = {
       ...config,
-      openaiApiKey: this.redactSecret(config.openaiApiKey),
+      aiApiKey: this.redactSecret(config.aiApiKey),
       githubToken: this.redactSecret(config.githubToken),
       apiKeys: {
         hackernews: config.apiKeys.hackernews ? this.redactSecret(config.apiKeys.hackernews) : undefined,

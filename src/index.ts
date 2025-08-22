@@ -10,6 +10,7 @@ import { WeeklyUpdateOrchestrator, OrchestratorResult } from './orchestrator';
 import { HackerNewsCollector } from './collectors/hackernews';
 import { ArXivCollector } from './collectors/arxiv';
 import { RSSCollector } from './collectors/rss';
+import { DEFAULT_RATE_LIMIT, SourceReliability } from './types';
 import { ConfigurationError } from './utils/errors';
 
 /**
@@ -29,19 +30,30 @@ function initializeCollectors(sources: string[]) {
         collectors.push(new ArXivCollector());
         break;
       
-      case 'rss':
+      case 'rss': {
         // Initialize with default RSS feeds
         const rssFeeds = [
-          'https://openai.com/blog/rss.xml',
-          'https://www.anthropic.com/rss.xml',
-          'https://blog.google/technology/ai/rss',
-          'https://news.mit.edu/rss/topic/artificial-intelligence2',
+          { url: 'https://openai.com/blog/rss.xml', sourceName: 'OpenAI Blog' },
+          { url: 'https://www.anthropic.com/rss.xml', sourceName: 'Anthropic Blog' },
+          { url: 'https://blog.google/technology/ai/rss', sourceName: 'Google AI Blog' },
+          { url: 'https://news.mit.edu/rss/topic/artificial-intelligence2', sourceName: 'MIT News AI' },
         ];
         
-        rssFeeds.forEach(feedUrl => {
-          collectors.push(new RSSCollector(feedUrl, `RSS-${new URL(feedUrl).hostname}`));
+        rssFeeds.forEach(feed => {
+          const url = new URL(feed.url);
+          const origin = `${url.protocol}//${url.host}`;
+          const name = `RSS-${url.hostname}`;
+          collectors.push(new RSSCollector(name, {
+            enabled: true,
+            baseUrl: origin,
+            rateLimit: DEFAULT_RATE_LIMIT,
+            reliability: SourceReliability.JOURNALISM,
+            feedUrl: feed.url,
+            sourceName: feed.sourceName,
+          }));
         });
         break;
+      }
       
       default:
         console.warn(`Unknown news source: ${source}`);
@@ -91,6 +103,19 @@ async function main(): Promise<void> {
     // Log configuration (with secrets redacted)
     if (appConfig.logLevel === 'debug') {
       config.logConfig();
+    } else {
+      // Show key configuration in normal mode
+      console.log('Configuration loaded:');
+      console.log(JSON.stringify({
+        aiProvider: appConfig.aiProvider,
+        aiModel: appConfig.aiModel,
+        timelineRepo: appConfig.timelineRepo.full,
+        maxEventsPerWeek: appConfig.maxEventsPerWeek,
+        significanceThreshold: appConfig.significanceThreshold,
+        newsSources: appConfig.newsSources,
+        dryRun: appConfig.dryRun,
+        logLevel: appConfig.logLevel
+      }, null, 2));
     }
     
     console.log('✅ Configuration validated\n');

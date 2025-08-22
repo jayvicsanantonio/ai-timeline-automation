@@ -134,7 +134,7 @@ export class GitHubManager {
       await this.createOrUpdateBranch(branchName);
 
       // Update timeline file
-      const updatedContent = await this.updateTimelineFile(
+      await this.updateTimelineFile(
         currentTimeline,
         newEvents,
         branchName
@@ -196,7 +196,7 @@ export class GitHubManager {
   /**
    * Create or update a branch
    */
-  private async createOrUpdateBranch(branchName: string): Promise<void> {
+  async createOrUpdateBranch(branchName: string): Promise<void> {
     try {
       // Get the SHA of the base branch
       const { data: baseBranch } = await this.octokit.repos.getBranch({
@@ -240,7 +240,7 @@ export class GitHubManager {
   /**
    * Update the timeline file with new events
    */
-  private async updateTimelineFile(
+  async updateTimelineFile(
     currentTimeline: TimelineData,
     newEvents: TimelineEntry[],
     branchName: string
@@ -249,14 +249,11 @@ export class GitHubManager {
     const allEvents = [...currentTimeline.events, ...newEvents]
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-    // Create updated content
+    // Create updated content with the new structure
     const updatedData = {
-      events: allEvents,
-      metadata: {
-        lastUpdated: new Date().toISOString(),
-        version: '1.0.0',
-        totalEvents: allEvents.length
-      }
+      lastUpdated: new Date().toISOString(),
+      totalEntries: allEvents.length,
+      entries: allEvents
     };
 
     const updatedContent = JSON.stringify(updatedData, null, 2);
@@ -278,6 +275,29 @@ export class GitHubManager {
     } catch (error) {
       console.error('Error updating timeline file:', error);
       throw new Error(`Failed to update timeline file: ${error}`);
+    }
+  }
+
+  // Public method for creating a PR (delegates to private method)
+  async createPullRequest(
+    branchName: string,
+    title: string,
+    body: string
+  ): Promise<any> {
+    try {
+      const { data: pr } = await this.octokit.pulls.create({
+        owner: this.config.owner,
+        repo: this.config.repo,
+        title,
+        body,
+        head: branchName,
+        base: this.config.baseBranch
+      });
+
+      return pr;
+    } catch (error) {
+      console.error('Error creating pull request:', error);
+      throw new Error(`Failed to create pull request: ${error}`);
     }
   }
 
@@ -362,30 +382,6 @@ export class GitHubManager {
     return lines.join('\n');
   }
 
-  /**
-   * Create the pull request
-   */
-  private async createPullRequest(
-    branchName: string,
-    title: string,
-    body: string
-  ): Promise<any> {
-    try {
-      const { data: pr } = await this.octokit.pulls.create({
-        owner: this.config.owner,
-        repo: this.config.repo,
-        title,
-        body,
-        head: branchName,
-        base: this.config.baseBranch
-      });
-
-      return pr;
-    } catch (error) {
-      console.error('Error creating pull request:', error);
-      throw new Error(`Failed to create pull request: ${error}`);
-    }
-  }
 
   /**
    * Add labels to the pull request

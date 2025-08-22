@@ -2,7 +2,7 @@
  * Unit tests for Logger
  */
 
-import { Logger, LogLevel, LogEntry, createLogger } from '../logger';
+import { Logger, LogLevel, LogEntry } from '../logger';
 
 describe('Logger', () => {
   let logger: Logger;

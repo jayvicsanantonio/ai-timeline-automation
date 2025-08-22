@@ -2,15 +2,14 @@
  * WeeklyUpdateOrchestrator - Coordinates the weekly workflow
  */
 
-import { AnalyzedEvent, RawEvent, toTimelineEntry } from '../types';
+import { AnalyzedEvent, RawEvent } from '../types';
 import { EventAnalyzer } from '../analyzers';
 import { GitHubManager } from '../github';
-import { DeduplicationService } from '../services/deduplication';
+import { DeduplicationService } from '../lib/deduplication';
 import { 
   CircuitBreakerFactory, 
   RetryPolicy, 
   RetryPolicies, 
-  ErrorHandler,
   AggregateError 
 } from '../utils';
 
@@ -238,7 +237,6 @@ export class WeeklyUpdateOrchestrator {
     }
 
     const breaker = CircuitBreakerFactory.getBreaker('Collectors');
-    const allEvents: RawEvent[] = [];
     const collectorErrors: Error[] = [];
 
     const promises = Array.from(this.collectors.entries()).map(async ([name, collector]) => {

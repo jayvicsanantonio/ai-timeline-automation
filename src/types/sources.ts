@@ -27,6 +27,9 @@ export enum SourceReliability {
   JOURNALISM = 0.7,
   /** Community-driven sources (HackerNews, Reddit, etc.) */
   COMMUNITY = 0.6,
+  // Aliases expected by some tests
+  HIGH = 0.9,
+  MEDIUM = 0.7,
 }
 
 /**

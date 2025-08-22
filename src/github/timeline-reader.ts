@@ -38,12 +38,9 @@ export interface TimelineData {
  * Schema for timeline JSON file
  */
 const TimelineFileSchema = z.object({
-  events: z.array(TimelineEntrySchema),
-  metadata: z.object({
-    lastUpdated: z.string().optional(),
-    version: z.string().optional(),
-    totalEvents: z.number().optional()
-  }).optional()
+  lastUpdated: z.string(),
+  totalEntries: z.number(),
+  entries: z.array(TimelineEntrySchema)
 });
 
 type TimelineFile = z.infer<typeof TimelineFileSchema>;
@@ -100,10 +97,10 @@ export class TimelineReader {
       const parsedData = JSON.parse(content);
       const validatedData = this.validateTimelineData(parsedData);
       
-      console.log(`Successfully fetched ${validatedData.events.length} existing events`);
+      console.log(`Successfully fetched ${validatedData.entries.length} existing events`);
       
       return {
-        events: validatedData.events,
+        events: validatedData.entries,
         sha: response.data.sha,
         content
       };
@@ -113,7 +110,7 @@ export class TimelineReader {
         return {
           events: [],
           sha: '',
-          content: JSON.stringify({ events: [], metadata: { version: '1.0.0' } }, null, 2)
+          content: JSON.stringify({ lastUpdated: new Date().toISOString(), totalEntries: 0, entries: [] }, null, 2)
         };
       }
       
@@ -127,11 +124,6 @@ export class TimelineReader {
    */
   private validateTimelineData(data: unknown): TimelineFile {
     try {
-      // If data is just an array, wrap it in the expected structure
-      if (Array.isArray(data)) {
-        data = { events: data };
-      }
-      
       return TimelineFileSchema.parse(data);
     } catch (error) {
       console.error('Timeline validation error:', error);
@@ -166,6 +158,12 @@ export class TimelineReader {
       const eventDate = new Date(event.date);
       return eventDate >= startDate && eventDate <= endDate;
     });
+  }
+
+  // Backward-compatible alias expected by older tests
+  async readTimeline(): Promise<TimelineEntry[]> {
+    const data = await this.fetchTimeline();
+    return data.events;
   }
 
   /**

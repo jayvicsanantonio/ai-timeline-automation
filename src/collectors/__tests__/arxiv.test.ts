@@ -16,9 +16,9 @@ describe('ArXivCollector', () => {
   let collector: ArXivCollector;
   let mockRSSParser: any;
 
-  beforeEach(() => {
-    const RSSParser = require('rss-parser');
-    mockRSSParser = new RSSParser();
+  beforeEach(async () => {
+    const RSSParser = await import('rss-parser');
+    mockRSSParser = new RSSParser.default();
     collector = new ArXivCollector({
       name: 'ArXiv',
       url: 'http://export.arxiv.org/rss/',

@@ -12,6 +12,8 @@ import {
   EventCategory, 
   SignificanceScores 
 } from '../types';
+import { createOpenRouter } from '../providers/openrouter';
+import { loadConfig } from '../config';
 
 // Schema for structured output from AI
 const AIAnalysisSchema = z.object({
@@ -44,13 +46,26 @@ export class EventAnalyzer {
   private readonly maxRetries: number;
   private readonly significanceThreshold: number;
   private readonly maxEventsToSelect: number;
+  private readonly aiProvider: any;
 
   constructor(config: EventAnalyzerConfig = {}) {
-    this.model = config.model || 'gpt-4o-mini';
+    const appConfig = loadConfig();
+    
+    // Use configured model or override from config
+    this.model = config.model || appConfig.aiModel;
     this.temperature = config.temperature ?? 0.3;
     this.maxRetries = config.maxRetries || 3;
-    this.significanceThreshold = config.significanceThreshold || 7.0;
-    this.maxEventsToSelect = config.maxEventsToSelect || 3;
+    this.significanceThreshold = config.significanceThreshold || appConfig.significanceThreshold;
+    this.maxEventsToSelect = config.maxEventsToSelect || appConfig.maxEventsPerWeek;
+    
+    // Initialize the appropriate AI provider
+    if (appConfig.aiProvider === 'openrouter') {
+      this.aiProvider = createOpenRouter(appConfig.aiApiKey);
+      console.log(`Using OpenRouter with model: ${this.model}`);
+    } else {
+      this.aiProvider = openai;
+      console.log(`Using OpenAI with model: ${this.model}`);
+    }
   }
 
   /**
@@ -143,7 +158,7 @@ export class EventAnalyzer {
     
     try {
       const result = await generateObject({
-        model: openai(this.model) as any, // Type assertion to handle version compatibility
+        model: this.aiProvider(this.model) as any, // Type assertion to handle version compatibility
         schema: AIAnalysisSchema,
         prompt,
         temperature: this.temperature,

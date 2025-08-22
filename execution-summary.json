@@ -1,0 +1,12 @@
+{
+  "success": false,
+  "metrics": {
+    "totalCollected": 137,
+    "afterDeduplication": 137,
+    "analyzed": 0,
+    "selected": 0,
+    "duration": 71
+  },
+  "errors": [],
+  "timestamp": "2025-08-22T20:57:31.051Z"
+}

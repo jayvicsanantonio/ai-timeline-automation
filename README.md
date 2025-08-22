@@ -83,7 +83,7 @@ Core Components:
 
 - **Node.js** 18+ 
 - **npm** 8+
-- **OpenAI API Key** for content analysis
+- **AI Provider API Key**: Either OpenAI or OpenRouter (supports free models!)
 - **GitHub Token** with repository access
 
 ### 1. Clone and Install
@@ -150,8 +150,16 @@ npm start
 ### Required Environment Variables
 
 ```bash
-# AI Analysis
-OPENAI_API_KEY=sk-...                    # OpenAI API key for content analysis
+# AI Provider (choose one)
+AI_PROVIDER=openrouter                   # Use 'openai' or 'openrouter'
+
+# For OpenAI
+OPENAI_API_KEY=sk-...                    # OpenAI API key
+AI_MODEL=gpt-4o-mini                     # Optional, defaults to gpt-4o-mini
+
+# For OpenRouter (supports free models!)
+OPENROUTER_API_KEY=sk-or-...            # OpenRouter API key
+AI_MODEL=moonshotai/kimi-k2:free        # Free model example
 
 # GitHub Integration  
 GITHUB_TOKEN=ghp_...                     # GitHub personal access token

@@ -74,7 +74,7 @@ describe('News Source Types', () => {
     });
 
     it('should accept config without apiKey', () => {
-      const { apiKey, ...configWithoutKey } = validConfig;
+      const { apiKey: _apiKey, ...configWithoutKey } = validConfig;
       expect(NewsSourceConfigSchema.parse(configWithoutKey)).toBeDefined();
     });
 

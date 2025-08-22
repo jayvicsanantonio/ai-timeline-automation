@@ -39,7 +39,7 @@ describe('Event Types', () => {
     });
 
     it('should accept RawEvent without metadata', () => {
-      const { metadata, ...eventWithoutMetadata } = validRawEvent;
+      const { metadata: _metadata, ...eventWithoutMetadata } = validRawEvent;
       expect(isRawEvent(eventWithoutMetadata)).toBe(true);
     });
   });

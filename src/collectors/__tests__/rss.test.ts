@@ -16,9 +16,9 @@ describe('RSSCollector', () => {
   let collector: RSSCollector;
   let mockRSSParser: any;
 
-  beforeEach(() => {
-    const RSSParser = require('rss-parser');
-    mockRSSParser = new RSSParser();
+  beforeEach(async () => {
+    const RSSParser = await import('rss-parser');
+    mockRSSParser = new RSSParser.default();
     collector = new RSSCollector({
       name: 'TechBlog',
       url: 'https://example.com/rss',

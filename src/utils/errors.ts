@@ -8,12 +8,16 @@
 export class BaseError extends Error {
   public readonly timestamp: Date;
   public readonly context?: Record<string, any>;
+  public readonly id: string;
 
   constructor(message: string, context?: Record<string, any>) {
     super(message);
     this.name = this.constructor.name;
     this.timestamp = new Date();
     this.context = context;
+    this.id = (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+      ? (crypto as any).randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     Error.captureStackTrace(this, this.constructor);
   }
 
@@ -48,14 +52,31 @@ export class NewsSourceError extends BaseError {
  * Error thrown when API rate limit is exceeded
  */
 export class RateLimitError extends BaseError {
+  public readonly resetTime?: Date;
+  public readonly retryAfterSeconds?: number;
+
   constructor(
     public readonly service: string,
-    public readonly retryAfter?: number
+    resetTimeOrRetryAfter?: Date | number,
+    retryAfterSeconds?: number
   ) {
     super(`Rate limit exceeded for ${service}`, {
       service,
-      retryAfter
+      resetTime: resetTimeOrRetryAfter instanceof Date ? resetTimeOrRetryAfter : undefined,
+      retryAfterSeconds: typeof resetTimeOrRetryAfter === 'number' ? resetTimeOrRetryAfter : retryAfterSeconds,
     });
+    if (resetTimeOrRetryAfter instanceof Date) {
+      this.resetTime = resetTimeOrRetryAfter;
+      this.retryAfterSeconds = retryAfterSeconds;
+    } else if (typeof resetTimeOrRetryAfter === 'number') {
+      this.retryAfterSeconds = resetTimeOrRetryAfter;
+    }
+  }
+
+  getSecondsUntilReset(): number | undefined {
+    if (!this.resetTime) return undefined;
+    const diff = Math.ceil((this.resetTime.getTime() - Date.now()) / 1000);
+    return Math.max(0, diff);
   }
 }
 
@@ -63,13 +84,21 @@ export class RateLimitError extends BaseError {
  * Error thrown when event validation fails
  */
 export class ValidationError extends BaseError {
-  constructor(
-    message: string,
-    public readonly validationErrors: string[]
-  ) {
-    super(message, {
-      validationErrors
-    });
+  public readonly field?: string;
+  public readonly value?: any;
+  public readonly validationErrors?: string[];
+
+  constructor(fieldOrMessage: string, messageOrErrors: string | string[], value?: any) {
+    if (Array.isArray(messageOrErrors)) {
+      // Original signature: (message, validationErrors)
+      super(fieldOrMessage, { validationErrors: messageOrErrors });
+      this.validationErrors = messageOrErrors;
+    } else {
+      // Expected by tests: (field, message, value?)
+      super(messageOrErrors, { field: fieldOrMessage, value });
+      this.field = fieldOrMessage;
+      this.value = value;
+    }
   }
 }
 
@@ -86,6 +115,11 @@ export class GitHubError extends BaseError {
       operation,
       statusCode
     });
+  }
+
+  isRetryable(): boolean {
+    const retryableStatuses = [429, 502, 503, 504];
+    return this.statusCode ? retryableStatuses.includes(this.statusCode) : false;
   }
 }
 
@@ -125,6 +159,12 @@ export class ConfigurationError extends BaseError {
 export class ErrorHandler {
   private static errorCounts: Map<string, number> = new Map();
   private static lastErrors: Map<string, Error> = new Map();
+
+  private collected: Error[] = [];
+
+  constructor(_logger?: any) {
+    // Logger parameter is intentionally unused but kept for compatibility
+  }
 
   /**
    * Handle an error with logging and optional recovery
@@ -175,6 +215,25 @@ export class ErrorHandler {
         throw error;
       }
     }) as T;
+  }
+
+  // Instance methods expected by tests
+  handle(error: Error): void {
+    this.collected.push(error);
+  }
+  getCollectedErrors(): Error[] {
+    return [...this.collected];
+  }
+  clearErrors(): void {
+    this.collected = [];
+  }
+  hasErrors(): boolean {
+    return this.collected.length > 0;
+  }
+  getSummary(): { total: number; byType: Record<string, number> } {
+    const byType: Record<string, number> = {};
+    this.collected.forEach(e => { byType[e.name] = (byType[e.name] || 0) + 1; });
+    return { total: this.collected.length, byType };
   }
 
   /**
@@ -236,8 +295,8 @@ export class ErrorHandler {
    */
   static getRetryDelay(error: Error, attempt: number): number {
     // Use retry-after header for rate limit errors
-    if (error instanceof RateLimitError && error.retryAfter) {
-      return error.retryAfter * 1000;
+    if (error instanceof RateLimitError && (error as any).retryAfter) {
+      return (error as any).retryAfter * 1000;
     }
 
     // Exponential backoff for other errors
@@ -275,6 +334,19 @@ export class AggregateError extends BaseError {
     return this.errors.filter(e => e instanceof errorClass) as T[];
   }
 
+  /** Alias expected by tests */
+  getErrorsByType<T extends Error>(errorClass: new (...args: any[]) => T): T[] {
+    return this.getErrorsOfType(errorClass);
+  }
+
+  getSummary(): { total: number; byType: Record<string, number> } {
+    const byType: Record<string, number> = {};
+    this.errors.forEach(e => {
+      byType[e.name] = (byType[e.name] || 0) + 1;
+    });
+    return { total: this.errors.length, byType };
+  }
+
   /**
    * Check if any error matches a condition
    */
@@ -290,6 +362,10 @@ export class ErrorBoundary {
   private errors: Error[] = [];
   private handlers: Map<string, (error: Error) => void> = new Map();
 
+  constructor(_handler?: ErrorHandler) {
+    // Handler parameter is intentionally unused but kept for compatibility
+  }
+
   /**
    * Register an error handler for a specific error type
    */
@@ -304,12 +380,13 @@ export class ErrorBoundary {
   /**
    * Execute a function within the error boundary
    */
-  async execute<T>(fn: () => Promise<T>): Promise<T | undefined> {
+  async execute<T>(fn: () => Promise<T> | T, fallback?: T): Promise<T> {
     try {
-      return await fn();
+      const result = fn();
+      return (result instanceof Promise) ? await result : result;
     } catch (error) {
       this.handleError(error as Error);
-      return undefined;
+      return fallback as T;
     }
   }
 

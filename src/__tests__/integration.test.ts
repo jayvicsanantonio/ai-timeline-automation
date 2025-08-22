@@ -12,7 +12,7 @@ import { GitHubManager } from '../github/github-manager';
 import { TimelineReader } from '../github/timeline-reader';
 import { Logger } from '../utils/logger';
 import { MetricsCollector } from '../utils/metrics';
-import { SourceReliability } from '../types';
+import { SourceReliability, EventCategory } from '../types';
 
 // Mock external dependencies
 jest.mock('axios');
@@ -37,11 +37,7 @@ describe('Integration Tests', () => {
     const mockConfig = {
       openaiApiKey: 'test-openai-key',
       githubToken: 'test-github-token',
-      timelineRepo: {
-        owner: 'test-owner',
-        repo: 'test-repo',
-        full: 'test-owner/test-repo'
-      },
+      timelineRepo: 'test-owner/test-repo',
       maxEventsPerWeek: 3,
       significanceThreshold: 7.0,
       newsSources: ['hackernews', 'arxiv', 'rss'],
@@ -54,7 +50,7 @@ describe('Integration Tests', () => {
       isTest: true
     };
 
-    orchestrator = new WeeklyUpdateOrchestrator(mockConfig, mockLogger, mockMetrics);
+    orchestrator = new WeeklyUpdateOrchestrator(mockConfig);
   });
 
   describe('Full Workflow Integration', () => {
@@ -62,87 +58,95 @@ describe('Integration Tests', () => {
       // Mock successful data from all sources
       const mockHNData = [
         {
-          id: 'hn-1',
           title: 'GPT-5 Released with Breakthrough Performance',
           url: 'https://news.ycombinator.com/item?id=123',
           source: 'HackerNews',
-          sourceReliability: SourceReliability.HIGH,
-          publishedAt: new Date(),
+          date: new Date(),
           content: 'OpenAI releases GPT-5 with significant improvements...',
-          score: 500
+          metadata: { id: 'hn-1', sourceReliability: SourceReliability.COMMUNITY, score: 500 }
         }
       ];
 
       const mockArXivData = [
         {
-          id: 'arxiv-1',
           title: 'Attention Is All You Need 2.0',
           url: 'https://arxiv.org/abs/2023.12345',
           source: 'ArXiv',
-          sourceReliability: SourceReliability.HIGH,
-          publishedAt: new Date(),
+          date: new Date(),
           content: 'We present an improved attention mechanism...',
-          authors: ['John Doe', 'Jane Smith'],
-          categories: ['cs.AI', 'cs.LG']
+          metadata: { id: 'arxiv-1', sourceReliability: SourceReliability.ACADEMIC, authors: ['John Doe', 'Jane Smith'], categories: ['cs.AI', 'cs.LG'] }
         }
       ];
 
       const mockRSSData = [
         {
-          id: 'rss-1',
           title: 'Google Unveils New AI Chip Architecture',
           url: 'https://techblog.com/google-ai-chip',
           source: 'TechBlog',
-          sourceReliability: SourceReliability.MEDIUM,
-          publishedAt: new Date(),
+          date: new Date(),
           content: 'Google announces breakthrough in AI chip design...',
-          author: 'Tech Reporter'
+          metadata: { id: 'rss-1', sourceReliability: SourceReliability.JOURNALISM, author: 'Tech Reporter' }
         }
       ];
 
       // Mock analyzer responses
       const mockAnalyzedEvents = [
         {
-          id: 'hn-1',
+          id: '2024-01-15-gpt-5-release',
           title: 'GPT-5 Released with Breakthrough Performance',
+          date: '2024-01-15T00:00:00.000Z',
           description: 'OpenAI releases GPT-5 with significant performance improvements across multiple benchmarks',
-          significance: 9.2,
-          category: 'breakthrough',
-          impact: {
-            technical: 9.0,
-            commercial: 9.0,
-            social: 8.5
+          category: 'product' as EventCategory,
+          sources: ['https://news.ycombinator.com/item?id=123'],
+          impactScore: 9.2,
+          significance: {
+            technologicalBreakthrough: 9.0,
+            industryImpact: 9.0,
+            adoptionScale: 9.0,
+            novelty: 8.5
           },
-          keywords: ['GPT-5', 'OpenAI', 'language model'],
-          reasoning: 'Major advancement in large language models'
+          metadata: {
+            keywords: ['GPT-5', 'OpenAI', 'language model'],
+            reasoning: 'Major advancement in large language models'
+          }
         },
         {
-          id: 'arxiv-1',
+          id: '2024-01-15-attention-mechanism-v2',
           title: 'Attention Is All You Need 2.0',
+          date: '2024-01-15T00:00:00.000Z',
           description: 'Improved attention mechanism for transformer architectures',
-          significance: 8.7,
-          category: 'research',
-          impact: {
-            technical: 9.0,
-            commercial: 7.5,
-            social: 7.0
+          category: 'research' as EventCategory,
+          sources: ['https://arxiv.org/abs/2023.12345'],
+          impactScore: 8.7,
+          significance: {
+            technologicalBreakthrough: 9.0,
+            industryImpact: 7.5,
+            adoptionScale: 8.0,
+            novelty: 8.5
           },
-          keywords: ['attention', 'transformer', 'architecture'],
-          reasoning: 'Significant improvement to foundational AI architecture'
+          metadata: {
+            keywords: ['attention', 'transformer', 'architecture'],
+            reasoning: 'Significant improvement to foundational AI architecture'
+          }
         },
         {
-          id: 'rss-1',
+          id: '2024-01-15-google-ai-chip',
           title: 'Google Unveils New AI Chip Architecture',
+          date: '2024-01-15T00:00:00.000Z',
           description: 'Google announces breakthrough in AI chip design for training and inference',
-          significance: 8.1,
-          category: 'development',
-          impact: {
-            technical: 8.0,
-            commercial: 8.5,
-            social: 7.0
+          category: 'product' as EventCategory,
+          sources: ['https://techblog.com/google-ai-chip'],
+          impactScore: 8.1,
+          significance: {
+            technologicalBreakthrough: 8.0,
+            industryImpact: 8.5,
+            adoptionScale: 7.5,
+            novelty: 7.8
           },
-          keywords: ['Google', 'AI chip', 'hardware'],
-          reasoning: 'Important hardware advancement for AI acceleration'
+          metadata: {
+            keywords: ['Google', 'AI chip', 'hardware'],
+            reasoning: 'Important hardware advancement for AI acceleration'
+          }
         }
       ];
 

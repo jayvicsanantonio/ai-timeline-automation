@@ -248,7 +248,7 @@ describe('CircuitBreakerFactory', () => {
     const breaker1 = CircuitBreakerFactory.getBreaker('Service1', {
       failureThreshold: 1
     });
-    const breaker2 = CircuitBreakerFactory.getBreaker('Service2');
+    const _breaker2 = CircuitBreakerFactory.getBreaker('Service2');
     
     const fn = jest.fn().mockRejectedValue(new Error('fail'));
     await expect(breaker1.execute(fn)).rejects.toThrow();

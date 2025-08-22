@@ -237,8 +237,8 @@ export const RetryPolicies = {
  */
 export function Retryable(config: RetryConfig = RetryPolicies.standard) {
   return function (
-    target: any,
-    propertyKey: string,
+    _target: any,
+    _propertyKey: string,
     descriptor: PropertyDescriptor
   ) {
     const originalMethod = descriptor.value;

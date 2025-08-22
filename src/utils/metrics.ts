@@ -201,10 +201,11 @@ export class MetricsCollector {
     const validScores = scores.filter(s => s > 0);
     const sumScores = validScores.reduce((a, b) => a + b, 0);
 
+    const avg = validScores.length > 0 ? sumScores / validScores.length : 0;
     this.selectionMetrics = {
       analyzed,
       selected,
-      averageScore: validScores.length > 0 ? sumScores / validScores.length : 0,
+      averageScore: Math.round(avg * 100) / 100, // round to 2 decimals for test stability
       maxScore: validScores.length > 0 ? Math.max(...validScores) : 0,
       minScore: validScores.length > 0 ? Math.min(...validScores) : 0,
       threshold

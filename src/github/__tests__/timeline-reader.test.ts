@@ -49,11 +49,9 @@ describe('TimelineReader', () => {
       ];
 
       const mockContent = {
-        events: mockEvents,
-        metadata: {
-          version: '1.0.0',
-          totalEvents: 1
-        }
+        lastUpdated: '2024-01-15T00:00:00Z',
+        totalEntries: 1,
+        entries: mockEvents
       };
 
       mockOctokit.repos.getContent.mockResolvedValueOnce({
@@ -85,12 +83,13 @@ describe('TimelineReader', () => {
       expect(result.events).toEqual([]);
       expect(result.sha).toBe('');
       expect(JSON.parse(result.content)).toEqual({
-        events: [],
-        metadata: { version: '1.0.0' }
+        lastUpdated: expect.any(String),
+        totalEntries: 0,
+        entries: []
       });
     });
 
-    it('should handle legacy array format', async () => {
+    it('should handle new structure format', async () => {
       const mockEvents: TimelineEntry[] = [
         {
           id: '2024-01-15-test-event',
@@ -103,10 +102,16 @@ describe('TimelineReader', () => {
         }
       ];
 
+      const mockContent = {
+        lastUpdated: '2024-01-15T00:00:00Z',
+        totalEntries: 1,
+        entries: mockEvents
+      };
+
       mockOctokit.repos.getContent.mockResolvedValueOnce({
         data: {
           type: 'file',
-          content: Buffer.from(JSON.stringify(mockEvents)).toString('base64'),
+          content: Buffer.from(JSON.stringify(mockContent)).toString('base64'),
           sha: 'mock-sha-456'
         }
       });
@@ -415,7 +420,7 @@ describe('TimelineReader', () => {
         {
           id: 'event-2',
           date: '2024-01-15T00:00:00Z',
-          title: 'GPT-5 Released by OpenAI',
+          title: 'OpenAI Releases GPT-5',
           description: 'Description',
           category: 'product',
           sources: [],
