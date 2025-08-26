@@ -1,9 +1,9 @@
-name: Daily AI Timeline Update
+name: Hourly AI Timeline Update
 
 on:
   schedule:
-    # Run every day at 7:00 AM PST (15:00 UTC)
-    - cron: '0 15 * * *'
+    # Run every hour
+    - cron: '0 * * * *'
 
   workflow_dispatch:
     inputs:
