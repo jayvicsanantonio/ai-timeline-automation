@@ -13,8 +13,6 @@ dotenv.config();
  * Environment variable schema
  */
 const EnvSchema = z.object({
-  // Required - either OpenAI or OpenRouter API key
-  OPENROUTER_API_KEY: z.string().optional(),
   OPENROUTER_API_KEY: z.string().optional(),
   GIT_TOKEN: z.string().min(1),
   TIMELINE_REPO: z
