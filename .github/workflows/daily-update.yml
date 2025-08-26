@@ -1,9 +1,9 @@
-name: Weekly AI Timeline Update
+name: Daily AI Timeline Update
 
 on:
   schedule:
-    # Run every Sunday at 00:00 UTC
-    - cron: '0 0 * * 0'
+    # Run every day at 7:00 AM PST (15:00 UTC)
+    - cron: '0 15 * * *'
 
   workflow_dispatch:
     inputs:
@@ -119,7 +119,7 @@ jobs:
             if (fs.existsSync(summaryPath)) {
               const summary = JSON.parse(fs.readFileSync(summaryPath, 'utf8'));
               
-              const comment = `## 🤖 Weekly AI Timeline Update - Run #${context.runNumber}
+              const comment = `## 🤖 Daily AI Timeline Update - Run #${context.runNumber}
               
               ### 📊 Summary
               - **Events Collected**: ${summary.metrics.totalCollected}
@@ -151,7 +151,7 @@ jobs:
         with:
           script: |
             const title = `AI Timeline Update Failed - Run #${context.runNumber}`;
-            const body = `The weekly AI timeline update has failed.
+            const body = `The daily AI timeline update has failed.
 
             **Run ID**: ${context.runId}
             **Triggered by**: ${context.eventName}
