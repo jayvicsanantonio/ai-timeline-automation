@@ -162,7 +162,7 @@ npm start
 AI_PROVIDER=openrouter                   # Use 'openai' or 'openrouter'
 
 # For OpenAI
-OPENAI_API_KEY=sk-...                    # OpenAI API key
+OPENROUTER_API_KEY=sk-...                    # OpenAI API key
 AI_MODEL=gpt-4o-mini                     # Optional, defaults to gpt-4o-mini
 
 # For OpenRouter (supports free models!)
@@ -279,7 +279,7 @@ The project includes a complete GitHub Actions workflow:
 1. **Enable GitHub Actions** in your repository
 2. **Configure Secrets** in repository settings:
    ```
-   OPENAI_API_KEY=sk-...
+   OPENROUTER_API_KEY=sk-...
    GIT_TOKEN=ghp_...  # GitHub Personal Access Token
    ```
 3. **Configure Variables**:
@@ -301,7 +301,7 @@ The project includes a complete GitHub Actions workflow:
 
 ```bash
 # Check API key validity
-curl -H "Authorization: Bearer $OPENAI_API_KEY" https://api.openai.com/v1/models
+curl -H "Authorization: Bearer $OPENROUTER_API_KEY" https://api.openai.com/v1/models
 
 # Verify GitHub token permissions
 curl -H "Authorization: token $GIT_TOKEN" https://api.github.com/user

@@ -2,9 +2,9 @@
  * Configuration management with environment variable validation
  */
 
-import { z } from 'zod';
-import * as dotenv from 'dotenv';
-import { ConfigurationError } from '../utils/errors';
+import * as dotenv from "dotenv";
+import { z } from "zod";
+import { ConfigurationError } from "../utils/errors";
 
 // Load .env file if it exists
 dotenv.config();
@@ -13,16 +13,14 @@ dotenv.config();
  * Environment variable schema
  */
 const EnvSchema = z.object({
-  // Required - either OpenAI or OpenRouter API key
-  OPENAI_API_KEY: z.string().optional(),
   OPENROUTER_API_KEY: z.string().optional(),
   GIT_TOKEN: z.string().min(1),
   TIMELINE_REPO: z
     .string()
-    .regex(/^[^/]+\/[^/]+$/, 'Must be in format owner/repo'),
+    .regex(/^[^/]+\/[^/]+$/, "Must be in format owner/repo"),
 
   // AI Provider settings
-  AI_PROVIDER: z.enum(['openai', 'openrouter']).default('openai'),
+  AI_PROVIDER: z.enum(["openai", "openrouter"]).default("openai"),
   AI_MODEL: z.string().optional(), // e.g., 'gpt-4o-mini' or 'moonshotai/kimi-k2:free'
 
   // Optional with defaults
@@ -30,29 +28,25 @@ const EnvSchema = z.object({
     .string()
     .transform(Number)
     .pipe(z.number().min(1).max(10))
-    .default('3'),
+    .default("3"),
   SIGNIFICANCE_THRESHOLD: z
     .string()
     .transform(Number)
     .pipe(z.number().min(0).max(10))
-    .default('7.0'),
-  NEWS_SOURCES: z.string().default('hackernews,arxiv,rss'),
-  LOG_LEVEL: z
-    .enum(['error', 'warn', 'info', 'debug'])
-    .default('info'),
+    .default("7.0"),
+  NEWS_SOURCES: z.string().default("hackernews,arxiv,rss"),
+  LOG_LEVEL: z.enum(["error", "warn", "info", "debug"]).default("info"),
   DRY_RUN: z
-    .enum(['true', 'false'])
-    .transform((v) => v === 'true')
-    .default('false'),
+    .enum(["true", "false"])
+    .transform((v) => v === "true")
+    .default("false"),
 
   // Optional API keys for news sources
   HACKERNEWS_API_KEY: z.string().optional(),
   ARXIV_API_KEY: z.string().optional(),
 
   // Node environment
-  NODE_ENV: z
-    .enum(['development', 'test', 'production'])
-    .default('production'),
+  NODE_ENV: z.enum(["development", "test", "production"]).default("production"),
 });
 
 type EnvConfig = z.infer<typeof EnvSchema>;
@@ -62,7 +56,7 @@ type EnvConfig = z.infer<typeof EnvSchema>;
  */
 export interface AppConfig {
   // Core settings
-  aiProvider: 'openai' | 'openrouter';
+  aiProvider: "openai" | "openrouter";
   aiApiKey: string;
   aiModel: string;
   githubToken: string;
@@ -85,8 +79,8 @@ export interface AppConfig {
   };
 
   // System settings
-  logLevel: 'error' | 'warn' | 'info' | 'debug';
-  nodeEnv: 'development' | 'test' | 'production';
+  logLevel: "error" | "warn" | "info" | "debug";
+  nodeEnv: "development" | "test" | "production";
   isDevelopment: boolean;
   isProduction: boolean;
   isTest: boolean;
@@ -110,21 +104,19 @@ class Configuration {
 
       if (!result.success) {
         const missing = result.error.errors
-          .filter((err) => err.message === 'Required')
-          .map((err) => err.path.join('.'));
+          .filter((err) => err.message === "Required")
+          .map((err) => err.path.join("."));
 
         const invalid = result.error.errors
-          .filter((err) => err.message !== 'Required')
-          .map((err) => `${err.path.join('.')}: ${err.message}`);
+          .filter((err) => err.message !== "Required")
+          .map((err) => `${err.path.join(".")}: ${err.message}`);
 
-        let message = 'Invalid configuration:';
+        let message = "Invalid configuration:";
         if (missing.length > 0) {
-          message += `\nMissing required variables: ${missing.join(
-            ', '
-          )}`;
+          message += `\nMissing required variables: ${missing.join(", ")}`;
         }
         if (invalid.length > 0) {
-          message += `\nInvalid variables: ${invalid.join('; ')}`;
+          message += `\nInvalid variables: ${invalid.join("; ")}`;
         }
 
         throw new ConfigurationError(message, missing);
@@ -137,26 +129,26 @@ class Configuration {
       let aiApiKey: string | undefined;
       let aiModel: string;
 
-      if (provider === 'openrouter') {
+      if (provider === "openrouter") {
         aiApiKey = this.env.OPENROUTER_API_KEY;
-        aiModel = this.env.AI_MODEL || 'moonshotai/kimi-k2:free';
+        aiModel = this.env.AI_MODEL || "moonshotai/kimi-k2:free";
         if (!aiApiKey) {
           throw new ConfigurationError(
-            'OPENROUTER_API_KEY is required when AI_PROVIDER=openrouter'
+            "OPENROUTER_API_KEY is required when AI_PROVIDER=openrouter",
           );
         }
       } else {
-        aiApiKey = this.env.OPENAI_API_KEY;
-        aiModel = this.env.AI_MODEL || 'gpt-4o-mini';
+        aiApiKey = this.env.OPENROUTER_API_KEY;
+        aiModel = this.env.AI_MODEL || "gpt-4o-mini";
         if (!aiApiKey) {
           throw new ConfigurationError(
-            'OPENAI_API_KEY is required when AI_PROVIDER=openai'
+            "OPENROUTER_API_KEY is required when AI_PROVIDER=openai",
           );
         }
       }
 
       // Parse timeline repo
-      const [owner, repo] = this.env.TIMELINE_REPO.split('/');
+      const [owner, repo] = this.env.TIMELINE_REPO.split("/");
 
       // Build configuration object
       this.config = {
@@ -171,7 +163,7 @@ class Configuration {
         },
         maxEventsPerWeek: this.env.MAX_EVENTS_PER_WEEK,
         significanceThreshold: this.env.SIGNIFICANCE_THRESHOLD,
-        newsSources: this.env.NEWS_SOURCES.split(',')
+        newsSources: this.env.NEWS_SOURCES.split(",")
           .map((s) => s.trim())
           .filter(Boolean),
         dryRun: this.env.DRY_RUN,
@@ -181,9 +173,9 @@ class Configuration {
         },
         logLevel: this.env.LOG_LEVEL,
         nodeEnv: this.env.NODE_ENV,
-        isDevelopment: this.env.NODE_ENV === 'development',
-        isProduction: this.env.NODE_ENV === 'production',
-        isTest: this.env.NODE_ENV === 'test',
+        isDevelopment: this.env.NODE_ENV === "development",
+        isProduction: this.env.NODE_ENV === "production",
+        isTest: this.env.NODE_ENV === "test",
       };
 
       return this.config;
@@ -191,9 +183,7 @@ class Configuration {
       if (error instanceof ConfigurationError) {
         throw error;
       }
-      throw new ConfigurationError(
-        `Failed to load configuration: ${error}`
-      );
+      throw new ConfigurationError(`Failed to load configuration: ${error}`);
     }
   }
 
@@ -265,17 +255,15 @@ class Configuration {
       },
     };
 
-    console.log('Configuration loaded:');
+    console.log("Configuration loaded:");
     console.log(JSON.stringify(redacted, null, 2));
   }
 
   private redactSecret(secret: string): string {
     if (secret.length <= 8) {
-      return '***';
+      return "***";
     }
-    return `${secret.substring(0, 4)}...${secret.substring(
-      secret.length - 4
-    )}`;
+    return `${secret.substring(0, 4)}...${secret.substring(secret.length - 4)}`;
   }
 }
 
@@ -287,9 +275,7 @@ export function loadConfig(): AppConfig {
   return config.load();
 }
 
-export function getConfig<K extends keyof AppConfig>(
-  key: K
-): AppConfig[K] {
+export function getConfig<K extends keyof AppConfig>(key: K): AppConfig[K] {
   return config.get(key);
 }
 
