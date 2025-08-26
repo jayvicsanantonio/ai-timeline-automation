@@ -34,7 +34,6 @@ function initializeCollectors(sources: string[]) {
         // Initialize with default RSS feeds
         const rssFeeds = [
           { url: 'https://openai.com/blog/rss.xml', sourceName: 'OpenAI Blog' },
-          { url: 'https://www.anthropic.com/rss.xml', sourceName: 'Anthropic Blog' },
           { url: 'https://blog.google/technology/ai/rss', sourceName: 'Google AI Blog' },
           { url: 'https://news.mit.edu/rss/topic/artificial-intelligence2', sourceName: 'MIT News AI' },
         ];
