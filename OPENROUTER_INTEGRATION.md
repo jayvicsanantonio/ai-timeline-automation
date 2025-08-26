@@ -76,7 +76,7 @@ export AI_MODEL=moonshotai/kimi-k2:free
 ### Use OpenAI (Paid)
 ```bash
 export AI_PROVIDER=openai
-export OPENAI_API_KEY=your_key
+export OPENROUTER_API_KEY=your_key
 export AI_MODEL=gpt-4o-mini
 ```
 

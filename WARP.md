@@ -64,7 +64,7 @@ npx jest src/collectors/hackernews.test.ts
 Environment configuration (essentials)
 
 Copy .env.example → .env and set at minimum:
-- OPENAI_API_KEY: for analysis
+- OPENROUTER_API_KEY: for analysis
 - GITHUB_TOKEN: PAT used for repo operations
 - TIMELINE_REPO: owner/repo for the target timeline
 
@@ -143,7 +143,7 @@ CI automation (GitHub Actions)
   - Manual trigger: workflow_dispatch with inputs (dry_run, max_events, significance_threshold)
   - Steps:
     - npm ci && npm run build
-    - Validate required secrets (OPENAI_API_KEY, GITHUB_TOKEN, TIMELINE_REPO)
+    - Validate required secrets (OPENROUTER_API_KEY, GITHUB_TOKEN, TIMELINE_REPO)
     - npm run update with env and optional NEWS_SOURCES/LOG_LEVEL
     - Upload logs and (optionally) comment summary to an issue
 
@@ -163,4 +163,3 @@ Notes and gotchas specific to this codebase
 - Deduplication import path: Orchestrator currently imports from '../services/deduplication' while the implementation resides at 'src/lib/deduplication.ts'. If you encounter a module not found error around DeduplicationService, verify/align this import path.
 - Running locally vs CI: npm run update expects dist/ to exist; ensure npm run build first (or use npm run dev for tsx execution during development).
 - Secrets in shell usage: prefer exporting envs or using a .env file loaded by dotenv; avoid echoing secrets in the terminal output.
-

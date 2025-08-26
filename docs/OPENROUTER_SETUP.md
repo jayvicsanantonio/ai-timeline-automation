@@ -78,7 +78,7 @@ AI_MODEL=moonshotai/kimi-k2:free
 
 ```bash
 AI_PROVIDER=openai
-OPENAI_API_KEY=your_key
+OPENROUTER_API_KEY=your_key
 AI_MODEL=gpt-4o-mini  # or gpt-3.5-turbo, gpt-4, etc.
 ```
 

@@ -318,7 +318,7 @@ class CircuitBreaker {
 ```yaml
 # .github/workflows/weekly-update.yml
 env:
-  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+  OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
   GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
   TIMELINE_REPO: 'username/ai-timeline'
   MAX_EVENTS_PER_WEEK: 3

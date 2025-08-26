@@ -24,8 +24,8 @@ export $(cat .env | grep -v '^#' | xargs)
 echo "1️⃣ Checking required environment variables..."
 MISSING_VARS=()
 
-if [ -z "$OPENAI_API_KEY" ] || [ "$OPENAI_API_KEY" = "your_openai_api_key_here" ]; then
-    MISSING_VARS+=("OPENAI_API_KEY")
+if [ -z "$OPENROUTER_API_KEY" ] || [ "$OPENROUTER_API_KEY" = "your_OPENROUTER_API_KEY_here" ]; then
+    MISSING_VARS+=("OPENROUTER_API_KEY")
 fi
 
 if [ -z "$GITHUB_TOKEN" ] || [ "$GITHUB_TOKEN" = "your_github_personal_access_token_here" ]; then
@@ -86,14 +86,14 @@ if [ -f execution-summary.json ]; then
     echo "4️⃣ Checking execution summary..."
     ANALYZED=$(cat execution-summary.json | grep -o '"analyzed":[0-9]*' | cut -d: -f2)
     SELECTED=$(cat execution-summary.json | grep -o '"selected":[0-9]*' | cut -d: -f2)
-    
+
     echo "   - Events analyzed: $ANALYZED"
     echo "   - Events selected: $SELECTED"
-    
+
     if [ "$ANALYZED" -gt 0 ]; then
         echo "✅ AI analysis is working"
     else
-        echo "⚠️  No events were analyzed - check your OPENAI_API_KEY"
+        echo "⚠️  No events were analyzed - check your OPENROUTER_API_KEY"
     fi
 fi
 
@@ -122,13 +122,13 @@ if [ $? -eq 0 ] && [ -s /tmp/github_user.json ]; then
     USERNAME=$(cat /tmp/github_user.json | grep -o '"login":"[^"]*' | cut -d'"' -f4)
     if [ ! -z "$USERNAME" ]; then
         echo "✅ GitHub authentication successful (logged in as: $USERNAME)"
-        
+
         # Check repository access
         REPO_OWNER=$(echo $TIMELINE_REPO | cut -d'/' -f1)
         REPO_NAME=$(echo $TIMELINE_REPO | cut -d'/' -f2)
-        
+
         curl -s -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME" > /tmp/repo_info.json 2>/dev/null
-        
+
         if grep -q "\"push\": true" /tmp/repo_info.json 2>/dev/null; then
             echo "✅ You have write access to $TIMELINE_REPO"
         else
