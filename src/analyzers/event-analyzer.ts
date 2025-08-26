@@ -73,22 +73,29 @@ export class EventAnalyzer {
    */
   async analyzeEvents(events: RawEvent[]): Promise<AnalyzedEvent[]> {
     console.log(`Analyzing ${events.length} events...`);
-    
-    // Process events in parallel but with a reasonable concurrency limit
+
     const BATCH_SIZE = 5;
     const analyzedEvents: AnalyzedEvent[] = [];
-    
+
     for (let i = 0; i < events.length; i += BATCH_SIZE) {
       const batch = events.slice(i, i + BATCH_SIZE);
-      const batchResults = await Promise.all(
-        batch.map(event => this.analyzeEvent(event))
-      );
-      
-      // Filter out null results (failed analyses)
-      const validResults = batchResults.filter((result): result is AnalyzedEvent => result !== null);
-      analyzedEvents.push(...validResults);
+      const promises = batch.map(event => this.analyzeEvent(event));
+      const results = await Promise.allSettled(promises);
+
+      const successfullyAnalyzed: AnalyzedEvent[] = [];
+      for (const result of results) {
+        if (result.status === 'fulfilled' && result.value) {
+          successfullyAnalyzed.push(result.value);
+        } else if (result.status === 'rejected') {
+          console.error(
+            'Event analysis failed with an unhandled rejection:',
+            result.reason
+          );
+        }
+      }
+      analyzedEvents.push(...successfullyAnalyzed);
     }
-    
+
     console.log(`Successfully analyzed ${analyzedEvents.length} events`);
     return analyzedEvents;
   }
