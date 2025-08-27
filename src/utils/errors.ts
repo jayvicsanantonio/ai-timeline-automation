@@ -7,17 +7,18 @@
  */
 export class BaseError extends Error {
   public readonly timestamp: Date;
-  public readonly context?: Record<string, any>;
+  public readonly context?: Record<string, unknown>;
   public readonly id: string;
 
-  constructor(message: string, context?: Record<string, any>) {
+  constructor(message: string, context?: Record<string, unknown>) {
     super(message);
     this.name = this.constructor.name;
     this.timestamp = new Date();
     this.context = context;
-    this.id = (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
-      ? (crypto as any).randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    this.id =
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? (crypto as any).randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     Error.captureStackTrace(this, this.constructor);
   }
 
@@ -27,7 +28,7 @@ export class BaseError extends Error {
       message: this.message,
       timestamp: this.timestamp,
       context: this.context,
-      stack: this.stack
+      stack: this.stack,
     };
   }
 }
@@ -39,11 +40,11 @@ export class NewsSourceError extends BaseError {
   constructor(
     public readonly source: string,
     message: string,
-    public readonly originalError?: any
+    public readonly originalError?: unknown
   ) {
     super(`News source ${source} error: ${message}`, {
       source,
-      originalError: originalError?.message || originalError
+      originalError: originalError instanceof Error ? originalError.message : originalError,
     });
   }
 }
@@ -62,8 +63,14 @@ export class RateLimitError extends BaseError {
   ) {
     super(`Rate limit exceeded for ${service}`, {
       service,
-      resetTime: resetTimeOrRetryAfter instanceof Date ? resetTimeOrRetryAfter : undefined,
-      retryAfterSeconds: typeof resetTimeOrRetryAfter === 'number' ? resetTimeOrRetryAfter : retryAfterSeconds,
+      resetTime:
+        resetTimeOrRetryAfter instanceof Date
+          ? resetTimeOrRetryAfter
+          : undefined,
+      retryAfterSeconds:
+        typeof resetTimeOrRetryAfter === 'number'
+          ? resetTimeOrRetryAfter
+          : retryAfterSeconds,
     });
     if (resetTimeOrRetryAfter instanceof Date) {
       this.resetTime = resetTimeOrRetryAfter;
@@ -75,7 +82,9 @@ export class RateLimitError extends BaseError {
 
   getSecondsUntilReset(): number | undefined {
     if (!this.resetTime) return undefined;
-    const diff = Math.ceil((this.resetTime.getTime() - Date.now()) / 1000);
+    const diff = Math.ceil(
+      (this.resetTime.getTime() - Date.now()) / 1000
+    );
     return Math.max(0, diff);
   }
 }
@@ -85,10 +94,14 @@ export class RateLimitError extends BaseError {
  */
 export class ValidationError extends BaseError {
   public readonly field?: string;
-  public readonly value?: any;
+  public readonly value?: unknown;
   public readonly validationErrors?: string[];
 
-  constructor(fieldOrMessage: string, messageOrErrors: string | string[], value?: any) {
+  constructor(
+    fieldOrMessage: string,
+    messageOrErrors: string | string[],
+    value?: unknown
+  ) {
     if (Array.isArray(messageOrErrors)) {
       // Original signature: (message, validationErrors)
       super(fieldOrMessage, { validationErrors: messageOrErrors });
@@ -113,13 +126,15 @@ export class GitHubError extends BaseError {
   ) {
     super(`GitHub ${operation} failed: ${message}`, {
       operation,
-      statusCode
+      statusCode,
     });
   }
 
   isRetryable(): boolean {
     const retryableStatuses = [429, 502, 503, 504];
-    return this.statusCode ? retryableStatuses.includes(this.statusCode) : false;
+    return this.statusCode
+      ? retryableStatuses.includes(this.statusCode)
+      : false;
   }
 }
 
@@ -134,7 +149,7 @@ export class AnalysisError extends BaseError {
   ) {
     super(`Analysis failed: ${message}`, {
       model,
-      event
+      event,
     });
   }
 }
@@ -148,7 +163,7 @@ export class ConfigurationError extends BaseError {
     public readonly missingFields?: string[]
   ) {
     super(`Configuration error: ${message}`, {
-      missingFields
+      missingFields,
     });
   }
 }
@@ -184,7 +199,7 @@ export class ErrorHandler {
       name: error.name,
       message: error.message,
       stack: error.stack,
-      ...(error instanceof BaseError ? error.context : {})
+      ...(error instanceof BaseError ? error.context : {}),
     });
 
     // Attempt recovery if provided
@@ -194,7 +209,10 @@ export class ErrorHandler {
         await recoveryFn();
         console.log(`[RECOVERY] Recovery successful for ${context}`);
       } catch (recoveryError) {
-        console.error(`[RECOVERY] Recovery failed for ${context}:`, recoveryError);
+        console.error(
+          `[RECOVERY] Recovery failed for ${context}:`,
+          recoveryError
+        );
       }
     }
   }
@@ -232,7 +250,9 @@ export class ErrorHandler {
   }
   getSummary(): { total: number; byType: Record<string, number> } {
     const byType: Record<string, number> = {};
-    this.collected.forEach(e => { byType[e.name] = (byType[e.name] || 0) + 1; });
+    this.collected.forEach((e) => {
+      byType[e.name] = (byType[e.name] || 0) + 1;
+    });
     return { total: this.collected.length, byType };
   }
 
@@ -240,15 +260,18 @@ export class ErrorHandler {
    * Get error statistics
    */
   static getStats() {
-    const stats: Record<string, { count: number; lastError?: string }> = {};
-    
+    const stats: Record<
+      string,
+      { count: number; lastError?: string }
+    > = {};
+
     this.errorCounts.forEach((count, context) => {
       stats[context] = {
         count,
-        lastError: this.lastErrors.get(context)?.message
+        lastError: this.lastErrors.get(context)?.message,
       };
     });
-    
+
     return stats;
   }
 
@@ -272,9 +295,12 @@ export class ErrorHandler {
     // Network errors are retryable
     if (error instanceof NewsSourceError) {
       const originalError = error.originalError;
-      if (originalError?.code === 'ECONNRESET' ||
-          originalError?.code === 'ETIMEDOUT' ||
-          originalError?.code === 'ENOTFOUND') {
+      if (
+        originalError && typeof originalError === 'object' && 'code' in originalError &&
+        (originalError.code === 'ECONNRESET' ||
+        originalError.code === 'ETIMEDOUT' ||
+        originalError.code === 'ENOTFOUND')
+      ) {
         return true;
       }
     }
@@ -282,7 +308,10 @@ export class ErrorHandler {
     // GitHub errors with specific status codes are retryable
     if (error instanceof GitHubError) {
       const retryableStatuses = [429, 502, 503, 504];
-      if (error.statusCode && retryableStatuses.includes(error.statusCode)) {
+      if (
+        error.statusCode &&
+        retryableStatuses.includes(error.statusCode)
+      ) {
         return true;
       }
     }
@@ -295,15 +324,21 @@ export class ErrorHandler {
    */
   static getRetryDelay(error: Error, attempt: number): number {
     // Use retry-after header for rate limit errors
-    if (error instanceof RateLimitError && (error as any).retryAfter) {
+    if (
+      error instanceof RateLimitError &&
+      (error as any).retryAfter
+    ) {
       return (error as any).retryAfter * 1000;
     }
 
     // Exponential backoff for other errors
     const baseDelay = 1000;
     const maxDelay = 60000;
-    const delay = Math.min(baseDelay * Math.pow(2, attempt - 1), maxDelay);
-    
+    const delay = Math.min(
+      baseDelay * Math.pow(2, attempt - 1),
+      maxDelay
+    );
+
     // Add jitter
     const jitter = delay * 0.2 * Math.random();
     return Math.round(delay + jitter);
@@ -314,34 +349,35 @@ export class ErrorHandler {
  * Aggregate multiple errors
  */
 export class AggregateError extends BaseError {
-  constructor(
-    message: string,
-    public readonly errors: Error[]
-  ) {
+  constructor(message: string, public readonly errors: Error[]) {
     super(message, {
       errorCount: errors.length,
-      errors: errors.map(e => ({
+      errors: errors.map((e) => ({
         name: e.name,
-        message: e.message
-      }))
+        message: e.message,
+      })),
     });
   }
 
   /**
    * Get all errors of a specific type
    */
-  getErrorsOfType<T extends Error>(errorClass: new (...args: any[]) => T): T[] {
-    return this.errors.filter(e => e instanceof errorClass) as T[];
+  getErrorsOfType<T extends Error>(
+    errorClass: new (...args: any[]) => T
+  ): T[] {
+    return this.errors.filter((e) => e instanceof errorClass) as T[];
   }
 
   /** Alias expected by tests */
-  getErrorsByType<T extends Error>(errorClass: new (...args: any[]) => T): T[] {
+  getErrorsByType<T extends Error>(
+    errorClass: new (...args: any[]) => T
+  ): T[] {
     return this.getErrorsOfType(errorClass);
   }
 
   getSummary(): { total: number; byType: Record<string, number> } {
     const byType: Record<string, number> = {};
-    this.errors.forEach(e => {
+    this.errors.forEach((e) => {
       byType[e.name] = (byType[e.name] || 0) + 1;
     });
     return { total: this.errors.length, byType };
@@ -380,10 +416,13 @@ export class ErrorBoundary {
   /**
    * Execute a function within the error boundary
    */
-  async execute<T>(fn: () => Promise<T> | T, fallback?: T): Promise<T> {
+  async execute<T>(
+    fn: () => Promise<T> | T,
+    fallback?: T
+  ): Promise<T> {
     try {
       const result = fn();
-      return (result instanceof Promise) ? await result : result;
+      return result instanceof Promise ? await result : result;
     } catch (error) {
       this.handleError(error as Error);
       return fallback as T;
@@ -395,7 +434,7 @@ export class ErrorBoundary {
    */
   private handleError(error: Error): void {
     this.errors.push(error);
-    
+
     // Find and execute specific handler
     const handler = this.handlers.get(error.constructor.name);
     if (handler) {

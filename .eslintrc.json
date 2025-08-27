@@ -25,7 +25,7 @@
         "varsIgnorePattern": "^_"
       }
     ],
-    "no-console": ["warn", { "allow": ["warn", "error"] }]
+    "no-console": "off"
   },
   "ignorePatterns": ["dist", "node_modules", "coverage", "*.js"]
 }
