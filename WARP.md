@@ -64,7 +64,7 @@ npx jest src/collectors/hackernews.test.ts
 Environment configuration (essentials)
 
 Copy .env.example → .env and set at minimum:
-- OPENROUTER_API_KEY: for analysis
+- OPENAI_API_KEY: for analysis
 - GITHUB_TOKEN: PAT used for repo operations
 - TIMELINE_REPO: owner/repo for the target timeline
 
@@ -143,7 +143,7 @@ CI automation (GitHub Actions)
   - Manual trigger: workflow_dispatch with inputs (dry_run, max_events, significance_threshold)
   - Steps:
     - npm ci && npm run build
-    - Validate required secrets (OPENROUTER_API_KEY, GITHUB_TOKEN, TIMELINE_REPO)
+    - Validate required secrets (OPENAI_API_KEY, GITHUB_TOKEN, TIMELINE_REPO)
     - npm run update with env and optional NEWS_SOURCES/LOG_LEVEL
     - Upload logs and (optionally) comment summary to an issue
 

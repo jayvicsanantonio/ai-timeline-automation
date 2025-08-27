@@ -12,7 +12,6 @@ import {
   EventCategory, 
   SignificanceScores 
 } from '../types';
-import { createOpenRouter } from '../providers/openrouter';
 import { loadConfig } from '../config';
 
 // Schema for structured output from AI
@@ -58,14 +57,9 @@ export class EventAnalyzer {
     this.significanceThreshold = config.significanceThreshold || appConfig.significanceThreshold;
     this.maxEventsToSelect = config.maxEventsToSelect || appConfig.maxEventsPerWeek;
     
-    // Initialize the appropriate AI provider
-    if (appConfig.aiProvider === 'openrouter') {
-      this.aiProvider = createOpenRouter(appConfig.aiApiKey);
-      console.log(`Using OpenRouter with model: ${this.model}`);
-    } else {
-      this.aiProvider = openai;
-      console.log(`Using OpenAI with model: ${this.model}`);
-    }
+    // Initialize OpenAI provider with API key
+    this.aiProvider = openai;
+    console.log(`Using OpenAI with model: ${this.model}`);
   }
 
   /**

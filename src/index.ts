@@ -106,7 +106,6 @@ async function main(): Promise<void> {
       // Show key configuration in normal mode
       console.log('Configuration loaded:');
       console.log(JSON.stringify({
-        aiProvider: appConfig.aiProvider,
         aiModel: appConfig.aiModel,
         timelineRepo: appConfig.timelineRepo.full,
         maxEventsPerWeek: appConfig.maxEventsPerWeek,

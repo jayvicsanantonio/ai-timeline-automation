@@ -13,15 +13,14 @@ dotenv.config();
  * Environment variable schema
  */
 const EnvSchema = z.object({
-  OPENROUTER_API_KEY: z.string().optional(),
+  OPENAI_API_KEY: z.string().min(1),
   GIT_TOKEN: z.string().min(1),
   TIMELINE_REPO: z
     .string()
     .regex(/^[^/]+\/[^/]+$/, "Must be in format owner/repo"),
 
-  // AI Provider settings
-  AI_PROVIDER: z.enum(["openai", "openrouter"]).default("openai"),
-  AI_MODEL: z.string().optional(), // e.g., 'gpt-4o-mini' or 'moonshotai/kimi-k2:free'
+  // AI Model settings
+  AI_MODEL: z.string().default("gpt-4o-mini"), // OpenAI models like 'gpt-4o-mini', 'gpt-4', 'gpt-3.5-turbo'
 
   // Optional with defaults
   MAX_EVENTS_PER_WEEK: z
@@ -56,7 +55,6 @@ type EnvConfig = z.infer<typeof EnvSchema>;
  */
 export interface AppConfig {
   // Core settings
-  aiProvider: "openai" | "openrouter";
   aiApiKey: string;
   aiModel: string;
   githubToken: string;
@@ -124,27 +122,14 @@ class Configuration {
 
       this.env = result.data;
 
-      // Validate AI provider configuration
-      const provider = this.env.AI_PROVIDER;
-      let aiApiKey: string | undefined;
-      let aiModel: string;
+      // Validate OpenAI configuration
+      const aiApiKey = this.env.OPENAI_API_KEY;
+      const aiModel = this.env.AI_MODEL;
 
-      if (provider === "openrouter") {
-        aiApiKey = this.env.OPENROUTER_API_KEY;
-        aiModel = this.env.AI_MODEL || "moonshotai/kimi-k2:free";
-        if (!aiApiKey) {
-          throw new ConfigurationError(
-            "OPENROUTER_API_KEY is required when AI_PROVIDER=openrouter",
-          );
-        }
-      } else {
-        aiApiKey = this.env.OPENROUTER_API_KEY;
-        aiModel = this.env.AI_MODEL || "gpt-4o-mini";
-        if (!aiApiKey) {
-          throw new ConfigurationError(
-            "OPENROUTER_API_KEY is required when AI_PROVIDER=openai",
-          );
-        }
+      if (!aiApiKey) {
+        throw new ConfigurationError(
+          "OPENAI_API_KEY is required",
+        );
       }
 
       // Parse timeline repo
@@ -152,7 +137,6 @@ class Configuration {
 
       // Build configuration object
       this.config = {
-        aiProvider: provider,
         aiApiKey,
         aiModel,
         githubToken: this.env.GIT_TOKEN,

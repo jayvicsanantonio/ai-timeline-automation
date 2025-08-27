@@ -24,7 +24,7 @@ Update your `.env` file with valid credentials:
 
 ```bash
 # Required for AI analysis
-OPENROUTER_API_KEY=sk-your-actual-openai-api-key
+OPENAI_API_KEY=sk-your-actual-openai-api-key
 
 # Required for PR creation (needs repo write access)
 GITHUB_TOKEN=ghp_your-github-personal-access-token
@@ -73,7 +73,7 @@ npm run update
 
 Expected output:
 - ✅ Collects 100+ events from news sources
-- ✅ Analyzes events with AI (if OPENROUTER_API_KEY is valid)
+- ✅ Analyzes events with AI (if OPENAI_API_KEY is valid)
 - ✅ Selects top events above significance threshold
 - ✅ Shows "DRY RUN MODE - No PR will be created"
 
@@ -114,7 +114,7 @@ Check your repository for the new PR:
 ### Scenario 1: No Valid API Keys
 ```bash
 # Use placeholder keys
-OPENROUTER_API_KEY=invalid_key npm run update
+OPENAI_API_KEY=invalid_key npm run update
 ```
 - ✅ Should collect events
 - ⚠️ Should fail to analyze (expected)
@@ -167,7 +167,7 @@ LOG_LEVEL=debug npm run update
 ## 🚨 Troubleshooting
 
 ### Issue: "No events analyzed"
-- **Cause**: Invalid OPENROUTER_API_KEY
+- **Cause**: Invalid OPENAI_API_KEY
 - **Fix**: Add valid OpenAI API key to .env
 
 ### Issue: "Failed to create pull request"
@@ -196,7 +196,7 @@ schedule:
 
 To test the GitHub Action:
 1. Push this code to a GitHub repository
-2. Add secrets: OPENROUTER_API_KEY, GITHUB_TOKEN
+2. Add secrets: OPENAI_API_KEY, GITHUB_TOKEN
 3. Manually trigger: Actions → Weekly AI Timeline Update → Run workflow
 
 ## 📈 Success Metrics

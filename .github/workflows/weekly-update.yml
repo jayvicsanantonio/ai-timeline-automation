@@ -63,7 +63,7 @@ jobs:
         run: |
           echo "Validating required secrets..."
           node -e "
-            const required = ['OPENROUTER_API_KEY', 'GIT_TOKEN', 'TIMELINE_REPO'];
+            const required = ['OPENAI_API_KEY', 'GIT_TOKEN', 'TIMELINE_REPO'];
             const missing = required.filter(key => !process.env[key]);
             if (missing.length > 0) {
               console.error('Missing required secrets:', missing.join(', '));
@@ -72,7 +72,7 @@ jobs:
             console.log('✅ All required secrets are configured');
           "
         env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
           TIMELINE_REPO: ${{ vars.TIMELINE_REPO }}
 
@@ -81,7 +81,7 @@ jobs:
         run: npm run update
         env:
           # Required secrets
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GIT_TOKEN: ${{ secrets.GH_PAT || secrets.GIT_TOKEN }}
 
           # Configuration

@@ -91,7 +91,7 @@ Core Components:
 
 - **Node.js** 18+
 - **npm** 8+
-- **AI Provider API Key**: Either OpenAI or OpenRouter (supports free models!)
+- **OpenAI API Key**: Required for AI-powered analysis
 - **GitHub Token** with repository access
 
 ### 1. Clone and Install
@@ -158,16 +158,9 @@ npm start
 ### Required Environment Variables
 
 ```bash
-# AI Provider (choose one)
-AI_PROVIDER=openrouter                   # Use 'openai' or 'openrouter'
-
-# For OpenAI
-OPENROUTER_API_KEY=sk-...                    # OpenAI API key
-AI_MODEL=gpt-4o-mini                     # Optional, defaults to gpt-4o-mini
-
-# For OpenRouter (supports free models!)
-OPENROUTER_API_KEY=sk-or-...            # OpenRouter API key
-AI_MODEL=moonshotai/kimi-k2:free        # Free model example
+# OpenAI Configuration
+OPENAI_API_KEY=sk-...                      # OpenAI API key (required)
+AI_MODEL=gpt-4o-mini                       # Optional, defaults to gpt-4o-mini
 
 # GitHub Integration
 GIT_TOKEN=ghp_...                     # GitHub personal access token
@@ -279,7 +272,7 @@ The project includes a complete GitHub Actions workflow:
 1. **Enable GitHub Actions** in your repository
 2. **Configure Secrets** in repository settings:
    ```
-   OPENROUTER_API_KEY=sk-...
+   OPENAI_API_KEY=sk-...
    GIT_TOKEN=ghp_...  # GitHub Personal Access Token
    ```
 3. **Configure Variables**:
@@ -301,7 +294,7 @@ The project includes a complete GitHub Actions workflow:
 
 ```bash
 # Check API key validity
-curl -H "Authorization: Bearer $OPENROUTER_API_KEY" https://api.openai.com/v1/models
+curl -H "Authorization: Bearer $OPENAI_API_KEY" https://api.openai.com/v1/models
 
 # Verify GitHub token permissions
 curl -H "Authorization: token $GIT_TOKEN" https://api.github.com/user

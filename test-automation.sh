@@ -24,8 +24,8 @@ export $(cat .env | grep -v '^#' | xargs)
 echo "1️⃣ Checking required environment variables..."
 MISSING_VARS=()
 
-if [ -z "$OPENROUTER_API_KEY" ] || [ "$OPENROUTER_API_KEY" = "your_OPENROUTER_API_KEY_here" ]; then
-    MISSING_VARS+=("OPENROUTER_API_KEY")
+if [ -z "$OPENAI_API_KEY" ] || [ "$OPENAI_API_KEY" = "your_openai_api_key_here" ]; then
+    MISSING_VARS+=("OPENAI_API_KEY")
 fi
 
 if [ -z "$GITHUB_TOKEN" ] || [ "$GITHUB_TOKEN" = "your_github_personal_access_token_here" ]; then
@@ -93,7 +93,7 @@ if [ -f execution-summary.json ]; then
     if [ "$ANALYZED" -gt 0 ]; then
         echo "✅ AI analysis is working"
     else
-        echo "⚠️  No events were analyzed - check your OPENROUTER_API_KEY"
+        echo "⚠️  No events were analyzed - check your OPENAI_API_KEY"
     fi
 fi
 
