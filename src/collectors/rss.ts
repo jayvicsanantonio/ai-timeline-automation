@@ -138,7 +138,17 @@ export class RSSCollector extends NewsSource {
    * Check if an RSS item is AI-related
    */
   private isAIRelated(item: RSSItem): boolean {
-    const categories = Array.isArray(item.categories) ? item.categories.join(' ') : String(item.categories || '');
+    let categories = '';
+    try {
+      if (Array.isArray(item.categories)) {
+        categories = item.categories.join(' ');
+      } else if (item.categories) {
+        categories = String(item.categories);
+      }
+    } catch (error) {
+      console.warn(`Warning: Failed to process categories for item "${item.title}", categories:`, item.categories);
+      categories = '';
+    }
     const searchText = `${item.title || ''} ${item.content || ''} ${item.contentSnippet || ''} ${categories}`.toLowerCase();
     
     return this.aiKeywords.some(keyword => {

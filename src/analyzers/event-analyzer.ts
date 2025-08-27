@@ -161,20 +161,149 @@ export class EventAnalyzer {
    * Perform AI analysis using Vercel AI SDK
    */
   private async performAIAnalysis(event: RawEvent): Promise<AIAnalysisResult | null> {
+    try {
+      // First try structured output
+      return await this.performStructuredAnalysis(event);
+    } catch (error) {
+      console.warn(`Structured analysis failed for ${event.title}, falling back to text-based analysis:`, error instanceof Error ? error.message : String(error));
+      // Fall back to text-based analysis
+      return await this.performTextBasedAnalysis(event);
+    }
+  }
+  
+  /**
+   * Perform structured AI analysis (for models that support it)
+   */
+  private async performStructuredAnalysis(event: RawEvent): Promise<AIAnalysisResult | null> {
     const prompt = this.buildAnalysisPrompt(event);
     
     try {
       const result = await generateObject({
-        model: this.aiProvider(this.model) as any, // Type assertion to handle version compatibility
+        model: this.aiProvider(this.model) as any,
         schema: AIAnalysisSchema,
         prompt,
         temperature: this.temperature,
-        maxRetries: 1, // We handle retries at a higher level
+        maxRetries: 1,
       });
 
       return result.object;
     } catch (error) {
-      console.error('AI analysis failed:', error);
+      // Re-throw to trigger fallback
+      throw error;
+    }
+  }
+  
+  /**
+   * Perform text-based AI analysis (fallback for models without structured output)
+   */
+  private async performTextBasedAnalysis(event: RawEvent): Promise<AIAnalysisResult | null> {
+    const { generateText } = await import('ai');
+    const prompt = this.buildTextAnalysisPrompt(event);
+    
+    try {
+      const result = await generateText({
+        model: this.aiProvider(this.model) as any,
+        prompt,
+        temperature: this.temperature,
+        maxRetries: 1,
+      });
+
+      return this.parseTextAnalysis(result.text, event);
+    } catch (error) {
+      console.error('Text-based analysis failed:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Build text-based analysis prompt for models without structured output
+   */
+  private buildTextAnalysisPrompt(event: RawEvent): string {
+    const date = event.date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+
+    return `You are an AI news analyst specializing in artificial intelligence developments. Analyze the following news event and provide a structured assessment.
+
+Event Information:
+- Title: ${event.title}
+- Date: ${date}
+- Source: ${event.source || 'Unknown'}
+- URL: ${event.url || 'N/A'}
+
+Content:
+${event.content}
+
+${event.metadata?.abstract ? `Abstract: ${event.metadata.abstract}` : ''}
+${event.metadata?.authors ? `Authors: ${event.metadata.authors.join(', ')}` : ''}
+
+Please analyze this event and provide your response in the following JSON format (respond ONLY with valid JSON):
+
+{
+  "title": "A clear, concise title (max 200 characters)",
+  "description": "A comprehensive description explaining its significance (max 1000 characters)",
+  "category": "research|product|regulation|industry",
+  "significance": {
+    "technologicalBreakthrough": <0-10>,
+    "industryImpact": <0-10>,
+    "adoptionScale": <0-10>,
+    "novelty": <0-10>
+  },
+  "keyInsights": ["insight 1", "insight 2"],
+  "relatedTopics": ["topic 1", "topic 2"]
+}
+
+Score meanings:
+- Technological breakthrough: How much this advances the state of the art (0-10)
+- Industry impact: Potential effect on the AI industry (0-10)
+- Adoption scale: Expected scale of adoption or usage (0-10)
+- Novelty: How unprecedented this development is (0-10)
+
+Focus on factual analysis and avoid speculation. Consider the event's importance in the context of AI development in ${new Date().getFullYear()}.`;
+  }
+
+  /**
+   * Parse text-based AI analysis response
+   */
+  private parseTextAnalysis(text: string, _event: RawEvent): AIAnalysisResult | null {
+    try {
+      // Extract JSON from response (in case there's extra text)
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        console.error('No JSON found in AI response:', text);
+        return null;
+      }
+
+      const parsed = JSON.parse(jsonMatch[0]);
+      
+      // Validate the structure
+      if (!parsed.title || !parsed.description || !parsed.category || !parsed.significance) {
+        console.error('Invalid AI response structure:', parsed);
+        return null;
+      }
+
+      // Ensure arrays exist
+      parsed.keyInsights = Array.isArray(parsed.keyInsights) ? parsed.keyInsights : [];
+      parsed.relatedTopics = Array.isArray(parsed.relatedTopics) ? parsed.relatedTopics : [];
+      
+      // Validate category
+      if (!['research', 'product', 'regulation', 'industry'].includes(parsed.category)) {
+        console.warn(`Invalid category '${parsed.category}', defaulting to 'research'`);
+        parsed.category = 'research';
+      }
+
+      // Validate significance scores
+      const sig = parsed.significance;
+      sig.technologicalBreakthrough = Math.max(0, Math.min(10, sig.technologicalBreakthrough || 0));
+      sig.industryImpact = Math.max(0, Math.min(10, sig.industryImpact || 0));
+      sig.adoptionScale = Math.max(0, Math.min(10, sig.adoptionScale || 0));
+      sig.novelty = Math.max(0, Math.min(10, sig.novelty || 0));
+
+      return parsed;
+    } catch (error) {
+      console.error('Failed to parse AI response:', error, 'Response:', text);
       return null;
     }
   }
