@@ -28,7 +28,7 @@ export class BaseError extends Error {
       message: this.message,
       timestamp: this.timestamp,
       context: this.context,
-      stack: this.stack,
+      stack: this.stack
     };
   }
 }
@@ -44,7 +44,7 @@ export class NewsSourceError extends BaseError {
   ) {
     super(`News source ${source} error: ${message}`, {
       source,
-      originalError: originalError instanceof Error ? originalError.message : originalError,
+      originalError: originalError instanceof Error ? originalError.message : originalError
     });
   }
 }
@@ -63,14 +63,9 @@ export class RateLimitError extends BaseError {
   ) {
     super(`Rate limit exceeded for ${service}`, {
       service,
-      resetTime:
-        resetTimeOrRetryAfter instanceof Date
-          ? resetTimeOrRetryAfter
-          : undefined,
+      resetTime: resetTimeOrRetryAfter instanceof Date ? resetTimeOrRetryAfter : undefined,
       retryAfterSeconds:
-        typeof resetTimeOrRetryAfter === 'number'
-          ? resetTimeOrRetryAfter
-          : retryAfterSeconds,
+        typeof resetTimeOrRetryAfter === 'number' ? resetTimeOrRetryAfter : retryAfterSeconds
     });
     if (resetTimeOrRetryAfter instanceof Date) {
       this.resetTime = resetTimeOrRetryAfter;
@@ -82,9 +77,7 @@ export class RateLimitError extends BaseError {
 
   getSecondsUntilReset(): number | undefined {
     if (!this.resetTime) return undefined;
-    const diff = Math.ceil(
-      (this.resetTime.getTime() - Date.now()) / 1000
-    );
+    const diff = Math.ceil((this.resetTime.getTime() - Date.now()) / 1000);
     return Math.max(0, diff);
   }
 }
@@ -97,11 +90,7 @@ export class ValidationError extends BaseError {
   public readonly value?: unknown;
   public readonly validationErrors?: string[];
 
-  constructor(
-    fieldOrMessage: string,
-    messageOrErrors: string | string[],
-    value?: unknown
-  ) {
+  constructor(fieldOrMessage: string, messageOrErrors: string | string[], value?: unknown) {
     if (Array.isArray(messageOrErrors)) {
       // Original signature: (message, validationErrors)
       super(fieldOrMessage, { validationErrors: messageOrErrors });
@@ -126,15 +115,13 @@ export class GitHubError extends BaseError {
   ) {
     super(`GitHub ${operation} failed: ${message}`, {
       operation,
-      statusCode,
+      statusCode
     });
   }
 
   isRetryable(): boolean {
     const retryableStatuses = [429, 502, 503, 504];
-    return this.statusCode
-      ? retryableStatuses.includes(this.statusCode)
-      : false;
+    return this.statusCode ? retryableStatuses.includes(this.statusCode) : false;
   }
 }
 
@@ -149,7 +136,7 @@ export class AnalysisError extends BaseError {
   ) {
     super(`Analysis failed: ${message}`, {
       model,
-      event,
+      event
     });
   }
 }
@@ -163,7 +150,7 @@ export class ConfigurationError extends BaseError {
     public readonly missingFields?: string[]
   ) {
     super(`Configuration error: ${message}`, {
-      missingFields,
+      missingFields
     });
   }
 }
@@ -177,10 +164,6 @@ export class ErrorHandler {
 
   private collected: Error[] = [];
 
-  constructor(_logger?: any) {
-    // Logger parameter is intentionally unused but kept for compatibility
-  }
-
   /**
    * Handle an error with logging and optional recovery
    */
@@ -190,16 +173,16 @@ export class ErrorHandler {
     recoveryFn?: () => Promise<void>
   ): Promise<void> {
     // Increment error count
-    const count = (this.errorCounts.get(context) || 0) + 1;
-    this.errorCounts.set(context, count);
-    this.lastErrors.set(context, error);
+    const count = (ErrorHandler.errorCounts.get(context) || 0) + 1;
+    ErrorHandler.errorCounts.set(context, count);
+    ErrorHandler.lastErrors.set(context, error);
 
     // Log error with context
     console.error(`[ERROR] ${context} (occurrence ${count}):`, {
       name: error.name,
       message: error.message,
       stack: error.stack,
-      ...(error instanceof BaseError ? error.context : {}),
+      ...(error instanceof BaseError ? error.context : {})
     });
 
     // Attempt recovery if provided
@@ -209,10 +192,7 @@ export class ErrorHandler {
         await recoveryFn();
         console.log(`[RECOVERY] Recovery successful for ${context}`);
       } catch (recoveryError) {
-        console.error(
-          `[RECOVERY] Recovery failed for ${context}:`,
-          recoveryError
-        );
+        console.error(`[RECOVERY] Recovery failed for ${context}:`, recoveryError);
       }
     }
   }
@@ -229,7 +209,7 @@ export class ErrorHandler {
       try {
         return await fn(...args);
       } catch (error) {
-        await this.handle(error as Error, context, recoveryFn);
+        await ErrorHandler.handle(error as Error, context, recoveryFn);
         throw error;
       }
     }) as T;
@@ -260,15 +240,12 @@ export class ErrorHandler {
    * Get error statistics
    */
   static getStats() {
-    const stats: Record<
-      string,
-      { count: number; lastError?: string }
-    > = {};
+    const stats: Record<string, { count: number; lastError?: string }> = {};
 
-    this.errorCounts.forEach((count, context) => {
+    ErrorHandler.errorCounts.forEach((count, context) => {
       stats[context] = {
         count,
-        lastError: this.lastErrors.get(context)?.message,
+        lastError: ErrorHandler.lastErrors.get(context)?.message
       };
     });
 
@@ -279,8 +256,8 @@ export class ErrorHandler {
    * Reset error statistics
    */
   static reset(): void {
-    this.errorCounts.clear();
-    this.lastErrors.clear();
+    ErrorHandler.errorCounts.clear();
+    ErrorHandler.lastErrors.clear();
   }
 
   /**
@@ -296,10 +273,12 @@ export class ErrorHandler {
     if (error instanceof NewsSourceError) {
       const originalError = error.originalError;
       if (
-        originalError && typeof originalError === 'object' && 'code' in originalError &&
+        originalError &&
+        typeof originalError === 'object' &&
+        'code' in originalError &&
         (originalError.code === 'ECONNRESET' ||
-        originalError.code === 'ETIMEDOUT' ||
-        originalError.code === 'ENOTFOUND')
+          originalError.code === 'ETIMEDOUT' ||
+          originalError.code === 'ENOTFOUND')
       ) {
         return true;
       }
@@ -308,10 +287,7 @@ export class ErrorHandler {
     // GitHub errors with specific status codes are retryable
     if (error instanceof GitHubError) {
       const retryableStatuses = [429, 502, 503, 504];
-      if (
-        error.statusCode &&
-        retryableStatuses.includes(error.statusCode)
-      ) {
+      if (error.statusCode && retryableStatuses.includes(error.statusCode)) {
         return true;
       }
     }
@@ -324,20 +300,14 @@ export class ErrorHandler {
    */
   static getRetryDelay(error: Error, attempt: number): number {
     // Use retry-after header for rate limit errors
-    if (
-      error instanceof RateLimitError &&
-      (error as any).retryAfter
-    ) {
+    if (error instanceof RateLimitError && (error as any).retryAfter) {
       return (error as any).retryAfter * 1000;
     }
 
     // Exponential backoff for other errors
     const baseDelay = 1000;
     const maxDelay = 60000;
-    const delay = Math.min(
-      baseDelay * Math.pow(2, attempt - 1),
-      maxDelay
-    );
+    const delay = Math.min(baseDelay * 2 ** (attempt - 1), maxDelay);
 
     // Add jitter
     const jitter = delay * 0.2 * Math.random();
@@ -348,30 +318,29 @@ export class ErrorHandler {
 /**
  * Aggregate multiple errors
  */
-export class AggregateError extends BaseError {
-  constructor(message: string, public readonly errors: Error[]) {
+export class CustomAggregateError extends BaseError {
+  constructor(
+    message: string,
+    public readonly errors: Error[]
+  ) {
     super(message, {
       errorCount: errors.length,
       errors: errors.map((e) => ({
         name: e.name,
-        message: e.message,
-      })),
+        message: e.message
+      }))
     });
   }
 
   /**
    * Get all errors of a specific type
    */
-  getErrorsOfType<T extends Error>(
-    errorClass: new (...args: any[]) => T
-  ): T[] {
+  getErrorsOfType<T extends Error>(errorClass: new (...args: any[]) => T): T[] {
     return this.errors.filter((e) => e instanceof errorClass) as T[];
   }
 
   /** Alias expected by tests */
-  getErrorsByType<T extends Error>(
-    errorClass: new (...args: any[]) => T
-  ): T[] {
+  getErrorsByType<T extends Error>(errorClass: new (...args: any[]) => T): T[] {
     return this.getErrorsOfType(errorClass);
   }
 
@@ -398,17 +367,10 @@ export class ErrorBoundary {
   private errors: Error[] = [];
   private handlers: Map<string, (error: Error) => void> = new Map();
 
-  constructor(_handler?: ErrorHandler) {
-    // Handler parameter is intentionally unused but kept for compatibility
-  }
-
   /**
    * Register an error handler for a specific error type
    */
-  on<T extends Error>(
-    errorClass: new (...args: any[]) => T,
-    handler: (error: T) => void
-  ): this {
+  on<T extends Error>(errorClass: new (...args: any[]) => T, handler: (error: T) => void): this {
     this.handlers.set(errorClass.name, handler as any);
     return this;
   }
@@ -416,10 +378,7 @@ export class ErrorBoundary {
   /**
    * Execute a function within the error boundary
    */
-  async execute<T>(
-    fn: () => Promise<T> | T,
-    fallback?: T
-  ): Promise<T> {
+  async execute<T>(fn: () => Promise<T> | T, fallback?: T): Promise<T> {
     try {
       const result = fn();
       return result instanceof Promise ? await result : result;
@@ -465,3 +424,6 @@ export class ErrorBoundary {
     return this.errors.length > 0;
   }
 }
+
+// Export alias for backwards compatibility while avoiding name collision
+export { CustomAggregateError as AggregateError };

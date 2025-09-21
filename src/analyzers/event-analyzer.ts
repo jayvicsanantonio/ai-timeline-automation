@@ -4,28 +4,17 @@
  */
 
 import { z } from 'zod';
-import {
-  RawEvent,
-  AnalyzedEvent,
-  EventCategory,
-  SignificanceScores,
-} from '../types';
 import { loadConfig } from '../config';
-import { createLLMProvider } from '../llm';
 import type { LLMFactoryOptions, LLMMessage, LLMProvider } from '../llm';
+import { createLLMProvider } from '../llm';
+import type { AnalyzedEvent, EventCategory, RawEvent, SignificanceScores } from '../types';
 
 // Schema for structured output from AI
 const AIAnalysisSchema = z.object({
-  title: z
-    .string()
-    .describe(
-      'Concise, informative title for the event (max 200 chars)'
-    ),
+  title: z.string().describe('Concise, informative title for the event (max 200 chars)'),
   description: z
     .string()
-    .describe(
-      'Clear description of the event and its significance (max 1000 chars)'
-    ),
+    .describe('Clear description of the event and its significance (max 1000 chars)'),
   category: z
     .enum(['research', 'product', 'regulation', 'industry'])
     .describe('Primary category of the event'),
@@ -40,25 +29,15 @@ const AIAnalysisSchema = z.object({
       .min(0)
       .max(10)
       .describe('Potential impact on the AI industry (0-10)'),
-    adoptionScale: z
-      .number()
-      .min(0)
-      .max(10)
-      .describe('Expected scale of adoption or usage (0-10)'),
+    adoptionScale: z.number().min(0).max(10).describe('Expected scale of adoption or usage (0-10)'),
     novelty: z
       .number()
       .min(0)
       .max(10)
-      .describe(
-        'How novel or unprecedented this development is (0-10)'
-      ),
+      .describe('How novel or unprecedented this development is (0-10)')
   }),
-  keyInsights: z
-    .array(z.string())
-    .describe('Key takeaways or implications'),
-  relatedTopics: z
-    .array(z.string())
-    .describe('Related AI topics or technologies'),
+  keyInsights: z.array(z.string()).describe('Key takeaways or implications'),
+  relatedTopics: z.array(z.string()).describe('Related AI topics or technologies')
 });
 
 type AIAnalysisResult = z.infer<typeof AIAnalysisSchema>;
@@ -103,18 +82,13 @@ export class EventAnalyzer {
   private readonly maxEventsToSelect: number;
   private readonly llmProviderPromise: Promise<LLMProvider>;
 
-  constructor(
-    config: EventAnalyzerConfig = {},
-    dependencies: EventAnalyzerDependencies = {}
-  ) {
+  constructor(config: EventAnalyzerConfig = {}, dependencies: EventAnalyzerDependencies = {}) {
     const appConfig = loadConfig();
 
     this.requestTemperature = config.temperature ?? 0.2;
     this.maxRetries = config.maxRetries || 3;
-    this.significanceThreshold =
-      config.significanceThreshold || appConfig.significanceThreshold;
-    this.maxEventsToSelect =
-      config.maxEventsToSelect || appConfig.maxEventsPerWeek;
+    this.significanceThreshold = config.significanceThreshold || appConfig.significanceThreshold;
+    this.maxEventsToSelect = config.maxEventsToSelect || appConfig.maxEventsPerWeek;
 
     if (dependencies.llmProvider) {
       this.llmProviderPromise = Promise.resolve(dependencies.llmProvider);
@@ -157,18 +131,13 @@ export class EventAnalyzer {
         if (result.status === 'fulfilled' && result.value) {
           successfullyAnalyzed.push(result.value);
         } else if (result.status === 'rejected') {
-          console.error(
-            'Event analysis failed with an unhandled rejection:',
-            result.reason
-          );
+          console.error('Event analysis failed with an unhandled rejection:', result.reason);
         }
       }
       analyzedEvents.push(...successfullyAnalyzed);
     }
 
-    console.log(
-      `Successfully analyzed ${analyzedEvents.length} events`
-    );
+    console.log(`Successfully analyzed ${analyzedEvents.length} events`);
     return analyzedEvents;
   }
 
@@ -186,9 +155,7 @@ export class EventAnalyzer {
         const analysis = await this.performLLMAnalysis(event, provider);
 
         // Calculate overall impact score
-        const impactScore = this.calculateImpactScore(
-          analysis.significance
-        );
+        const impactScore = this.calculateImpactScore(analysis.significance);
 
         // Generate a unique ID for the event
         const id = this.generateEventId(event.date, event.title);
@@ -210,15 +177,12 @@ export class EventAnalyzer {
             originalTitle: event.title,
             analysisProvider: provider.id,
             analysisModel: provider.model,
-            analysisDate: new Date().toISOString(),
-          },
+            analysisDate: new Date().toISOString()
+          }
         };
       } catch (error) {
         retries++;
-        console.error(
-          `Error analyzing event (attempt ${retries}/${this.maxRetries}):`,
-          error
-        );
+        console.error(`Error analyzing event (attempt ${retries}/${this.maxRetries}):`, error);
 
         if (retries >= this.maxRetries) {
           console.error(
@@ -228,9 +192,7 @@ export class EventAnalyzer {
         }
 
         // Exponential backoff
-        await new Promise((resolve) =>
-          setTimeout(resolve, Math.pow(2, retries) * 1000)
-        );
+        await new Promise((resolve) => setTimeout(resolve, 2 ** retries * 1000));
       }
     }
 
@@ -244,7 +206,7 @@ export class EventAnalyzer {
     const messages = this.buildCompletionMessages(event);
     const response = await provider.complete({
       messages,
-      temperature: this.requestTemperature,
+      temperature: this.requestTemperature
     });
 
     const payload = this.extractJsonPayload(response.text);
@@ -255,7 +217,7 @@ export class EventAnalyzer {
     } catch (error) {
       console.error('Failed to parse LLM analysis output', {
         payload,
-        error: error instanceof Error ? error.message : error,
+        error: error instanceof Error ? error.message : error
       });
       throw error;
     }
@@ -265,12 +227,12 @@ export class EventAnalyzer {
     return [
       {
         role: 'system',
-        content: SYSTEM_PROMPT,
+        content: SYSTEM_PROMPT
       },
       {
         role: 'user',
-        content: this.buildAnalysisPrompt(event),
-      },
+        content: this.buildAnalysisPrompt(event)
+      }
     ];
   }
 
@@ -302,7 +264,7 @@ export class EventAnalyzer {
     const date = event.date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
-      day: 'numeric',
+      day: 'numeric'
     });
     const lines: string[] = [
       'Event briefing for analysis:',
@@ -312,7 +274,7 @@ export class EventAnalyzer {
       `URL: ${event.url || 'N/A'}`,
       '',
       'Full content:',
-      event.content,
+      event.content
     ];
 
     if (event.metadata?.abstract) {
@@ -327,10 +289,7 @@ export class EventAnalyzer {
       lines.push('', `Additional context: ${event.metadata.additionalContext}`);
     }
 
-    lines.push(
-      '',
-      'Return the JSON object now. Do not include explanations or commentary.'
-    );
+    lines.push('', 'Return the JSON object now. Do not include explanations or commentary.');
 
     return lines.join('\n');
   }
@@ -338,20 +297,17 @@ export class EventAnalyzer {
   /**
    * Calculate overall impact score from significance dimensions
    */
-  private calculateImpactScore(
-    significance: SignificanceScores
-  ): number {
+  private calculateImpactScore(significance: SignificanceScores): number {
     // Weighted average of significance dimensions
     const weights = {
       technologicalBreakthrough: 0.35,
       industryImpact: 0.3,
       adoptionScale: 0.2,
-      novelty: 0.15,
+      novelty: 0.15
     };
 
     const score =
-      significance.technologicalBreakthrough *
-        weights.technologicalBreakthrough +
+      significance.technologicalBreakthrough * weights.technologicalBreakthrough +
       significance.industryImpact * weights.industryImpact +
       significance.adoptionScale * weights.adoptionScale +
       significance.novelty * weights.novelty;
@@ -377,9 +333,7 @@ export class EventAnalyzer {
   /**
    * Rank and select the most significant events
    */
-  async selectTopEvents(
-    events: AnalyzedEvent[]
-  ): Promise<AnalyzedEvent[]> {
+  async selectTopEvents(events: AnalyzedEvent[]): Promise<AnalyzedEvent[]> {
     console.log(
       `Selecting top ${this.maxEventsToSelect} events from ${events.length} analyzed events`
     );
@@ -402,10 +356,7 @@ export class EventAnalyzer {
     });
 
     // Take top N events
-    const selectedEvents = sortedEvents.slice(
-      0,
-      this.maxEventsToSelect
-    );
+    const selectedEvents = sortedEvents.slice(0, this.maxEventsToSelect);
 
     console.log(`Selected ${selectedEvents.length} top events`);
     selectedEvents.forEach((event) => {
@@ -433,7 +384,7 @@ export class EventAnalyzer {
     events.forEach((event, index) => {
       const date = new Date(event.date).toLocaleDateString('en-US', {
         month: 'short',
-        day: 'numeric',
+        day: 'numeric'
       });
 
       lines.push(`### ${index + 1}. ${event.title}`);

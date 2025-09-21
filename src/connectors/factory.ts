@@ -1,10 +1,10 @@
-import { loadSourcesConfig, SourcesConfig } from '../config';
-import { OpenAIBlogConnector } from './openai-blog';
-import { RssSourceConnector } from './rss-connector';
+import { loadSourcesConfig, type SourcesConfig } from '../config';
 import { AbstractSourceConnector } from './base';
 import { DeepMindBlogConnector } from './deepmind-blog';
+import { OpenAIBlogConnector } from './openai-blog';
 import { PapersWithCodeConnector } from './paperswithcode';
-import { SourceConnector, SourceConnectorInit } from './types';
+import { RssSourceConnector } from './rss-connector';
+import type { SourceConnector, SourceConnectorInit } from './types';
 
 export interface ConnectorBootstrapResult {
   windowDays: number;
@@ -58,10 +58,12 @@ export async function bootstrapConnectors(): Promise<ConnectorBootstrapResult> {
 
   return {
     windowDays: config.window_days,
-    connectors,
+    connectors
   };
 }
 
-export function isAbstractSourceConnector(value: SourceConnector): value is AbstractSourceConnector {
+export function isAbstractSourceConnector(
+  value: SourceConnector
+): value is AbstractSourceConnector {
   return value instanceof AbstractSourceConnector;
 }

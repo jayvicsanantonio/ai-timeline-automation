@@ -1,16 +1,16 @@
-import { promises as fs } from 'fs';
-import path from 'path';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
 import YAML from 'yaml';
-import { ZodType } from 'zod';
-import {
-  LlmFile,
-  LlmFileSchema,
-  PipelineFile,
-  PipelineFileSchema,
-  SourcesFile,
-  SourcesFileSchema,
-} from './yaml-types';
+import type { ZodType } from 'zod';
 import { ConfigurationError } from '../utils/errors';
+import {
+  type LlmFile,
+  LlmFileSchema,
+  type PipelineFile,
+  PipelineFileSchema,
+  type SourcesFile,
+  SourcesFileSchema
+} from './yaml-types';
 
 const CONFIG_ROOT = process.env.CONFIG_ROOT ?? path.resolve(process.cwd(), 'config');
 
@@ -35,9 +35,7 @@ function validate<T>(schema: ZodType<T>, value: unknown, fileLabel: string): T {
     return schema.parse(value);
   } catch (error) {
     const message = error instanceof Error ? error.message : JSON.stringify(error);
-    throw new ConfigurationError(
-      `Invalid configuration in ${fileLabel}: ${message}`
-    );
+    throw new ConfigurationError(`Invalid configuration in ${fileLabel}: ${message}`);
   }
 }
 

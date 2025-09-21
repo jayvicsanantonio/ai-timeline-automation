@@ -17,18 +17,21 @@ export class LLMBudgetExceededError extends LLMProviderError {
       providerId,
       dimension,
       limit,
-      attempted,
+      attempted
     });
   }
 }
 
 export class LLMProviderAggregateError extends LLMProviderError {
-  constructor(message: string, public readonly errors: Error[]) {
+  constructor(
+    message: string,
+    public readonly errors: Error[]
+  ) {
     super(message, {
       causes: errors.map((err) => ({
         name: err.name,
-        message: err.message,
-      })),
+        message: err.message
+      }))
     });
   }
 }

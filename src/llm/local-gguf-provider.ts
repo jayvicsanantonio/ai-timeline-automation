@@ -1,12 +1,12 @@
-import {
+import { BaseLLMProvider } from './base-provider';
+import { LLMProviderError } from './errors';
+import type {
   LLMCompletionRequest,
   LLMCompletionResult,
   LLMEmbeddingRequest,
   LLMEmbeddingResult,
-  LLMProviderInit,
+  LLMProviderInit
 } from './types';
-import { BaseLLMProvider } from './base-provider';
-import { LLMProviderError } from './errors';
 
 const LOCAL_GGUF_MODEL_ID = 'local-gguf-small';
 
@@ -14,7 +14,7 @@ export class LocalGGUFProvider extends BaseLLMProvider {
   constructor(options: Omit<LLMProviderInit, 'model'> & Partial<Pick<LLMProviderInit, 'model'>>) {
     super({
       ...options,
-      model: options.model ?? LOCAL_GGUF_MODEL_ID,
+      model: options.model ?? LOCAL_GGUF_MODEL_ID
     } as LLMProviderInit);
   }
 
@@ -22,18 +22,14 @@ export class LocalGGUFProvider extends BaseLLMProvider {
     return false;
   }
 
-  protected async doComplete(
-    request: LLMCompletionRequest
-  ): Promise<LLMCompletionResult> {
+  protected async doComplete(request: LLMCompletionRequest): Promise<LLMCompletionResult> {
     throw new LLMProviderError(
       'Local GGUF provider endpoint is not configured',
       this.buildContext(request.correlationId)
     );
   }
 
-  protected async doEmbed(
-    request: LLMEmbeddingRequest
-  ): Promise<LLMEmbeddingResult> {
+  protected async doEmbed(request: LLMEmbeddingRequest): Promise<LLMEmbeddingResult> {
     throw new LLMProviderError(
       'Local GGUF provider does not support embeddings yet',
       this.buildContext(request.correlationId)

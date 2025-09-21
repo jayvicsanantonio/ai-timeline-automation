@@ -2,9 +2,9 @@
  * Unit tests for GitHubManager
  */
 
-import { GitHubManager } from '../github-manager';
-import { AnalyzedEvent } from '../../types';
 import { Octokit } from '@octokit/rest';
+import type { AnalyzedEvent } from '../../types';
+import { GitHubManager } from '../github-manager';
 import { TimelineReader } from '../timeline-reader';
 
 // Mock Octokit
@@ -16,10 +16,10 @@ jest.mock('../timeline-reader', () => ({
     fetchTimeline: jest.fn().mockResolvedValue({
       events: [],
       sha: 'test-sha',
-      content: JSON.stringify({ 
+      content: JSON.stringify({
         lastUpdated: '2024-01-01T00:00:00Z',
         totalEntries: 0,
-        entries: [] 
+        entries: []
       })
     }),
     validateNewEvents: jest.fn().mockReturnValue({
@@ -59,7 +59,7 @@ describe('GitHubManager', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     // Setup Octokit mock
     const mockOctokitInstance = {
       repos: {
@@ -89,8 +89,10 @@ describe('GitHubManager', () => {
       }
     };
 
-    (Octokit as jest.MockedClass<typeof Octokit>).mockImplementation(() => mockOctokitInstance as any);
-    
+    (Octokit as jest.MockedClass<typeof Octokit>).mockImplementation(
+      () => mockOctokitInstance as unknown
+    );
+
     manager = new GitHubManager(mockConfig);
   });
 
@@ -111,7 +113,7 @@ describe('GitHubManager', () => {
   describe('createTimelineUpdatePR', () => {
     it('should create a pull request with new timeline events', async () => {
       const result = await manager.createTimelineUpdatePR(mockAnalyzedEvents);
-      
+
       expect(result).toEqual({
         number: 123,
         url: 'https://github.com/test-owner/test-repo/pull/123',
@@ -121,22 +123,27 @@ describe('GitHubManager', () => {
     });
 
     it('should handle empty events array', async () => {
-      await expect(manager.createTimelineUpdatePR([])).rejects.toThrow('No events to add to timeline');
+      await expect(manager.createTimelineUpdatePR([])).rejects.toThrow(
+        'No events to add to timeline'
+      );
     });
 
     it('should detect existing PR and return without creating', async () => {
-      const mockOctokitInstance = (Octokit as jest.MockedClass<typeof Octokit>).mock.results[0].value;
-      
+      const mockOctokitInstance = (Octokit as jest.MockedClass<typeof Octokit>).mock.results[0]
+        .value;
+
       // Mock existing PR
       mockOctokitInstance.pulls.list = jest.fn().mockResolvedValue({
-        data: [{
-          number: 100,
-          html_url: 'https://github.com/test-owner/test-repo/pull/100'
-        }]
+        data: [
+          {
+            number: 100,
+            html_url: 'https://github.com/test-owner/test-repo/pull/100'
+          }
+        ]
       });
 
       const result = await manager.createTimelineUpdatePR(mockAnalyzedEvents, 1, 2024);
-      
+
       expect(result).toEqual({
         number: 100,
         url: 'https://github.com/test-owner/test-repo/pull/100',
@@ -147,41 +154,47 @@ describe('GitHubManager', () => {
 
     it('should handle specific week and year parameters', async () => {
       const result = await manager.createTimelineUpdatePR(mockAnalyzedEvents, 10, 2024);
-      
+
       expect(result.branch).toBe('auto-update/week-2024-10');
     });
   });
 
   describe('Error handling', () => {
     it('should handle GitHub API errors gracefully', async () => {
-      const mockOctokitInstance = (Octokit as jest.MockedClass<typeof Octokit>).mock.results[0].value;
-      
+      const mockOctokitInstance = (Octokit as jest.MockedClass<typeof Octokit>).mock.results[0]
+        .value;
+
       mockOctokitInstance.repos.getBranch = jest.fn().mockRejectedValue(new Error('API Error'));
-      
-      await expect(manager.createTimelineUpdatePR(mockAnalyzedEvents))
-        .rejects.toThrow('Failed to create/update branch');
+
+      await expect(manager.createTimelineUpdatePR(mockAnalyzedEvents)).rejects.toThrow(
+        'Failed to create/update branch'
+      );
     });
 
     it('should handle validation failures', async () => {
-      const mockTimelineReader = (TimelineReader as jest.MockedClass<typeof TimelineReader>).mock.results[0].value;
-      
+      const mockTimelineReader = (TimelineReader as jest.MockedClass<typeof TimelineReader>).mock
+        .results[0].value;
+
       mockTimelineReader.validateNewEvents = jest.fn().mockReturnValue({
         valid: false,
         conflicts: ['Event ID already exists'],
         warnings: []
       });
 
-      await expect(manager.createTimelineUpdatePR(mockAnalyzedEvents))
-        .rejects.toThrow('Event validation failed');
+      await expect(manager.createTimelineUpdatePR(mockAnalyzedEvents)).rejects.toThrow(
+        'Event validation failed'
+      );
     });
 
     it('should handle case where all events already exist', async () => {
-      const mockTimelineReader = (TimelineReader as jest.MockedClass<typeof TimelineReader>).mock.results[0].value;
-      
+      const mockTimelineReader = (TimelineReader as jest.MockedClass<typeof TimelineReader>).mock
+        .results[0].value;
+
       mockTimelineReader.filterNewEvents = jest.fn().mockReturnValue([]);
 
-      await expect(manager.createTimelineUpdatePR(mockAnalyzedEvents))
-        .rejects.toThrow('No new events to add');
+      await expect(manager.createTimelineUpdatePR(mockAnalyzedEvents)).rejects.toThrow(
+        'No new events to add'
+      );
     });
   });
 });

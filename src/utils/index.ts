@@ -4,54 +4,54 @@
 
 export {
   CircuitBreaker,
-  CircuitBreakerFactory,
   CircuitBreakerConfig,
+  CircuitBreakerFactory,
   CircuitBreakerState,
   CircuitState
 } from './circuit-breaker';
-
 export {
-  retry,
-  retryable,
-  RetryConfig,
-  RetryPolicy,
-  RetryPolicies,
-  Retryable
-} from './retry';
-
-export {
+  AggregateError,
+  AnalysisError,
   BaseError,
+  ConfigurationError,
+  ErrorBoundary,
+  ErrorHandler,
+  GitHubError,
   NewsSourceError,
   RateLimitError,
-  ValidationError,
-  GitHubError,
-  AnalysisError,
-  ConfigurationError,
-  ErrorHandler,
-  AggregateError,
-  ErrorBoundary
+  ValidationError
 } from './errors';
-
 export {
-  Logger,
-  LogLevel,
+  createLogger,
+  getLogger,
   LogContext,
   LogEntry,
-  createLogger,
-  getLogger
+  Logger,
+  LogLevel
 } from './logger';
-
 export {
-  MetricsCollector,
-  EventMetrics,
   ApiMetrics,
-  SelectionMetrics,
+  EventMetrics,
   ExecutionMetrics,
   getMetricsCollector,
-  trackEventCollection,
-  trackApiCall,
-  trackSelection,
-  trackError,
   getMetricsSummary,
-  logMetricsSummary
+  logMetricsSummary,
+  MetricsCollector,
+  SelectionMetrics,
+  trackApiCall,
+  trackError,
+  trackEventCollection,
+  trackSelection
 } from './metrics';
+export {
+  clearRetryPolicies,
+  executeWithRetryPolicy,
+  getRetryPolicy,
+  Retryable,
+  RetryConfig,
+  RetryPolicies,
+  registerRetryPolicy,
+  retry,
+  retryable,
+  wrapWithRetryPolicy
+} from './retry';

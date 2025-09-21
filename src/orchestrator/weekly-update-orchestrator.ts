@@ -2,23 +2,20 @@
  * WeeklyUpdateOrchestrator - Coordinates the weekly workflow
  */
 
-import { randomUUID } from 'crypto';
-import { AnalyzedEvent, RawEvent } from '../types';
+import { randomUUID } from 'node:crypto';
 import { EventAnalyzer } from '../analyzers';
+import { loadPipelineConfig, type PipelineConfig } from '../config';
+import { bootstrapConnectors, computeIngestionWindow, type RawItem } from '../connectors';
 import { GitHubManager } from '../github';
 import { DeduplicationService } from '../lib/deduplication';
+import type { AnalyzedEvent, RawEvent } from '../types';
 import {
   CircuitBreakerFactory,
-  RetryPolicy,
+  AggregateError as CustomAggregateError,
+  executeWithRetryPolicy,
   RetryPolicies,
-  AggregateError,
+  registerRetryPolicy
 } from '../utils';
-import {
-  bootstrapConnectors,
-  computeIngestionWindow,
-  RawItem,
-} from '../connectors';
-import { loadPipelineConfig, PipelineConfig } from '../config';
 
 export interface OrchestratorConfig {
   timelineRepo: string; // format: owner/repo
@@ -83,7 +80,7 @@ export class WeeklyUpdateOrchestrator {
       analyzer ||
       new EventAnalyzer({
         significanceThreshold: config.significanceThreshold || 7.0,
-        maxEventsToSelect: config.maxEventsPerWeek || 3,
+        maxEventsToSelect: config.maxEventsPerWeek || 3
       });
 
     this.github =
@@ -91,7 +88,7 @@ export class WeeklyUpdateOrchestrator {
       new GitHubManager({
         owner,
         repo,
-        token: config.githubToken || process.env.GIT_TOKEN,
+        token: config.githubToken || process.env.GIT_TOKEN
       });
 
     this.deduplication = deduplication || new DeduplicationService();
@@ -101,25 +98,19 @@ export class WeeklyUpdateOrchestrator {
     this.dryRun = config.dryRun ?? false;
 
     // Configure retry policies for different services
-    RetryPolicy.register('collector', RetryPolicies.standard);
-    RetryPolicy.register('analyzer', {
+    registerRetryPolicy('collector', RetryPolicies.standard);
+    registerRetryPolicy('analyzer', {
       ...RetryPolicies.standard,
       maxAttempts: 2,
       onRetry: (attempt, error, delay) => {
-        console.log(
-          `[Analyzer] Retry attempt ${attempt}, waiting ${delay}ms:`,
-          error.message
-        );
-      },
+        console.log(`[Analyzer] Retry attempt ${attempt}, waiting ${delay}ms:`, error.message);
+      }
     });
-    RetryPolicy.register('github', {
+    registerRetryPolicy('github', {
       ...RetryPolicies.rateLimited,
       onRetry: (attempt, error, delay) => {
-        console.log(
-          `[GitHub] Retry attempt ${attempt}, waiting ${delay}ms:`,
-          error.message
-        );
-      },
+        console.log(`[GitHub] Retry attempt ${attempt}, waiting ${delay}ms:`, error.message);
+      }
     });
   }
 
@@ -128,9 +119,7 @@ export class WeeklyUpdateOrchestrator {
    */
   registerCollector(collector: NewsCollector): void {
     if (this.collectors.has(collector.name)) {
-      console.warn(
-        `Collector ${collector.name} already registered, replacing...`
-      );
+      console.warn(`Collector ${collector.name} already registered, replacing...`);
     }
     this.collectors.set(collector.name, collector);
     console.log(`Registered collector: ${collector.name}`);
@@ -140,7 +129,9 @@ export class WeeklyUpdateOrchestrator {
    * Register multiple collectors
    */
   registerCollectors(collectors: NewsCollector[]): void {
-    collectors.forEach((c) => this.registerCollector(c));
+    for (const collector of collectors) {
+      this.registerCollector(collector);
+    }
   }
 
   /**
@@ -153,21 +144,15 @@ export class WeeklyUpdateOrchestrator {
       afterDeduplication: 0,
       analyzed: 0,
       selected: 0,
-      duration: 0,
+      duration: 0
     };
 
-    console.log(
-      '===================================================='
-    );
-    console.log(
-      '🚀 WeeklyUpdateOrchestrator: Starting weekly update'
-    );
+    console.log('====================================================');
+    console.log('🚀 WeeklyUpdateOrchestrator: Starting weekly update');
     console.log(`⚙️  Configuration:`);
     console.log(`   - Timeline repo: ${this.config.timelineRepo}`);
     console.log(`   - Max events per week: ${this.maxEventsPerWeek}`);
-    console.log(
-      `   - Significance threshold: ${this.significanceThreshold}`
-    );
+    console.log(`   - Significance threshold: ${this.significanceThreshold}`);
     console.log('====================================================\n');
 
     try {
@@ -183,22 +168,16 @@ export class WeeklyUpdateOrchestrator {
           `   ✓ Collected ${ingestion.totalBeforeLimit} items across ${ingestion.connectorSummaries.length} sources`
         );
         if (ingestion.totalBeforeLimit !== collected.length) {
-          console.log(
-            `   ✓ Trimmed to ${collected.length} items per pipeline limits`
-          );
+          console.log(`   ✓ Trimmed to ${collected.length} items per pipeline limits`);
         }
         ingestion.connectorSummaries.forEach((summary) => {
-          console.log(
-            `     - ${summary.id}: ${summary.itemCount} items in ${summary.latencyMs}ms`
-          );
+          console.log(`     - ${summary.id}: ${summary.itemCount} items in ${summary.latencyMs}ms`);
         });
         console.log(
           `   ✓ Window: ${ingestion.windowStart.toISOString()} -> ${ingestion.windowEnd.toISOString()}\n`
         );
       } else {
-        console.log(
-          '   ⚠️ No config-driven connectors found, falling back to legacy collectors'
-        );
+        console.log('   ⚠️ No config-driven connectors found, falling back to legacy collectors');
         collected = await this.collectAllEvents();
         metrics.totalCollected = collected.length;
         console.log(`   ✓ Collected ${collected.length} raw events\n`);
@@ -211,32 +190,22 @@ export class WeeklyUpdateOrchestrator {
           analyzed: [],
           selected: [],
           metrics,
-          errors: this.errors,
+          errors: this.errors
         };
       }
 
       // Step 2: Deduplicate events
       console.log('🔄 Step 2: Deduplicating events...');
-      const deduplicated = await this.deduplication.deduplicate(
-        collected
-      );
+      const deduplicated = await this.deduplication.deduplicate(collected);
       metrics.afterDeduplication = deduplicated.length;
-      console.log(
-        `   ✓ ${deduplicated.length} events after deduplication`
-      );
-      console.log(
-        `   ✓ Removed ${
-          collected.length - deduplicated.length
-        } duplicates\n`
-      );
+      console.log(`   ✓ ${deduplicated.length} events after deduplication`);
+      console.log(`   ✓ Removed ${collected.length - deduplicated.length} duplicates\n`);
 
       // Step 3: Analyze events with AI
       console.log('🤖 Step 3: Analyzing events with AI...');
       const analyzed = await this.analyzeEvents(deduplicated);
       metrics.analyzed = analyzed.length;
-      console.log(
-        `   ✓ Successfully analyzed ${analyzed.length} events\n`
-      );
+      console.log(`   ✓ Successfully analyzed ${analyzed.length} events\n`);
 
       // Step 4: Select top events
       console.log('⭐ Step 4: Selecting top events...');
@@ -245,15 +214,9 @@ export class WeeklyUpdateOrchestrator {
       metrics.selected = finalSelected.length;
 
       if (finalSelected.length > 0) {
-        console.log(
-          `   ✓ Selected ${finalSelected.length} significant events:`
-        );
+        console.log(`   ✓ Selected ${finalSelected.length} significant events:`);
         finalSelected.forEach((event, i) => {
-          console.log(
-            `     ${i + 1}. ${event.title} (score: ${
-              event.impactScore
-            })`
-          );
+          console.log(`     ${i + 1}. ${event.title} (score: ${event.impactScore})`);
         });
         console.log();
       } else {
@@ -269,7 +232,7 @@ export class WeeklyUpdateOrchestrator {
           console.log('📝 Step 5: Creating GitHub pull request...');
           try {
             const pr = await this.createPullRequest(finalSelected);
-            prUrl = pr.url;
+            prUrl = pr.html_url;
             console.log(`   ✓ Pull request created: ${prUrl}\n`);
           } catch (error) {
             console.error('   ✗ Failed to create pull request:', error);
@@ -277,9 +240,7 @@ export class WeeklyUpdateOrchestrator {
           }
         }
       } else {
-        console.log(
-          '⏭️  Step 5: Skipping PR creation (no events selected)\n'
-        );
+        console.log('⏭️  Step 5: Skipping PR creation (no events selected)\n');
       }
 
       // Calculate duration and print summary
@@ -287,13 +248,12 @@ export class WeeklyUpdateOrchestrator {
       this.printSummary(metrics, prUrl);
 
       return {
-        success:
-          finalSelected.length > 0 && (this.dryRun ? true : !!prUrl),
+        success: finalSelected.length > 0 && (this.dryRun ? true : !!prUrl),
         analyzed,
         selected: finalSelected,
         prUrl,
         metrics,
-        errors: this.errors,
+        errors: this.errors
       };
     } catch (error) {
       console.error('\n❌ Fatal error in orchestrator:', error);
@@ -306,7 +266,7 @@ export class WeeklyUpdateOrchestrator {
         analyzed: [],
         selected: [],
         metrics,
-        errors: this.errors,
+        errors: this.errors
       };
     }
   }
@@ -323,41 +283,34 @@ export class WeeklyUpdateOrchestrator {
     const breaker = CircuitBreakerFactory.getBreaker('Collectors');
     const collectorErrors: Error[] = [];
 
-    const promises = Array.from(this.collectors.entries()).map(
-      async ([name, collector]) => {
-        try {
-          console.log(`   📡 Fetching from ${name}...`);
-          const events = await breaker.execute(() =>
-            RetryPolicy.execute('collector', () =>
-              collector.fetchEvents()
-            )
-          );
-          console.log(`      ✓ ${name}: ${events.length} events`);
-          return events;
-        } catch (error) {
-          const err = error as Error;
-          console.error(`      ✗ ${name} failed: ${err.message}`);
-          collectorErrors.push(err);
-          this.errors.push(err);
-          return [] as RawEvent[];
-        }
+    const promises = Array.from(this.collectors.entries()).map(async ([name, collector]) => {
+      try {
+        console.log(`   📡 Fetching from ${name}...`);
+        const events = (await breaker.execute(() =>
+          executeWithRetryPolicy('collector', () => collector.fetchEvents())
+        )) as RawEvent[];
+        console.log(`      ✓ ${name}: ${events.length} events`);
+        return events;
+      } catch (error) {
+        const err = error as Error;
+        console.error(`      ✗ ${name} failed: ${err.message}`);
+        collectorErrors.push(err);
+        this.errors.push(err);
+        return [] as RawEvent[];
       }
-    );
+    });
 
     const results = await Promise.all(promises);
-    const flatResults = results.flat();
+    const flatResults = results.flat() as RawEvent[];
 
     // Log summary
-    const successCount = results.filter((r) => r.length > 0).length;
+    const successCount = results.filter((r: RawEvent[]) => r.length > 0).length;
     console.log(
       `   📊 Collection summary: ${successCount}/${this.collectors.size} sources succeeded`
     );
 
     if (collectorErrors.length === this.collectors.size) {
-      throw new AggregateError(
-        'All collectors failed',
-        collectorErrors
-      );
+      throw new CustomAggregateError('All collectors failed', collectorErrors);
     }
 
     return flatResults;
@@ -386,9 +339,10 @@ export class WeeklyUpdateOrchestrator {
     }
 
     const { windowStart, windowEnd } = computeIngestionWindow(windowDays);
-    const correlationId = typeof randomUUID === 'function'
-      ? randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const correlationId =
+      typeof randomUUID === 'function'
+        ? randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
     const maxPerSource = pipelineConfig.limits?.max_items_per_source ?? 20;
 
@@ -400,13 +354,13 @@ export class WeeklyUpdateOrchestrator {
             windowStart,
             windowEnd,
             maxItems: maxPerSource,
-            correlationId,
+            correlationId
           });
           const events = items.map((item) => this.rawItemToRawEvent(item));
           return {
             id: connector.id,
             events,
-            latencyMs: Date.now() - startedAt,
+            latencyMs: Date.now() - startedAt
           };
         } catch (error) {
           const latencyMs = Date.now() - startedAt;
@@ -415,7 +369,7 @@ export class WeeklyUpdateOrchestrator {
           return {
             id: connector.id,
             events: [] as RawEvent[],
-            latencyMs,
+            latencyMs
           };
         }
       })
@@ -424,21 +378,16 @@ export class WeeklyUpdateOrchestrator {
     const allEvents = results.flatMap((result) => result.events);
 
     const totalBeforeLimit = allEvents.length;
-    allEvents.sort(
-      (a, b) => b.date.getTime() - a.date.getTime()
-    );
+    allEvents.sort((a, b) => b.date.getTime() - a.date.getTime());
 
     const maxPerRun = pipelineConfig.limits?.max_items_per_run;
-    const limitedEvents =
-      typeof maxPerRun === 'number'
-        ? allEvents.slice(0, maxPerRun)
-        : allEvents;
+    const limitedEvents = typeof maxPerRun === 'number' ? allEvents.slice(0, maxPerRun) : allEvents;
 
     const connectorSummaries: ConnectorIngestionSummary[] = results.map(
       ({ id, events, latencyMs }) => ({
         id,
         itemCount: events.length,
-        latencyMs,
+        latencyMs
       })
     );
 
@@ -447,27 +396,21 @@ export class WeeklyUpdateOrchestrator {
       totalBeforeLimit,
       connectorSummaries,
       windowStart,
-      windowEnd,
+      windowEnd
     };
   }
 
   private rawItemToRawEvent(item: RawItem): RawEvent {
-    const publishedAt = item.publishedAt
-      ? new Date(item.publishedAt)
-      : new Date();
-    const eventDate = Number.isNaN(publishedAt.getTime())
-      ? new Date()
-      : publishedAt;
+    const publishedAt = item.publishedAt ? new Date(item.publishedAt) : new Date();
+    const eventDate = Number.isNaN(publishedAt.getTime()) ? new Date() : publishedAt;
 
     const summaryContent =
-      item.summary && item.summary.trim().length > 0
-        ? item.summary.trim()
-        : undefined;
+      item.summary && item.summary.trim().length > 0 ? item.summary.trim() : undefined;
 
     const metadata: Record<string, unknown> = {
       ...item.metadata,
       raw_item_id: item.id,
-      source_id: item.source,
+      source_id: item.source
     };
 
     if (summaryContent) {
@@ -486,23 +429,19 @@ export class WeeklyUpdateOrchestrator {
       source: item.source,
       url: item.url,
       content,
-      metadata,
+      metadata
     };
   }
 
   /**
    * Analyze events with error handling
    */
-  private async analyzeEvents(
-    events: RawEvent[]
-  ): Promise<AnalyzedEvent[]> {
+  private async analyzeEvents(events: RawEvent[]): Promise<AnalyzedEvent[]> {
     const breaker = CircuitBreakerFactory.getBreaker('Analyzer');
 
     try {
       return await breaker.execute(() =>
-        RetryPolicy.execute('analyzer', () =>
-          this.analyzer.analyzeEvents(events)
-        )
+        executeWithRetryPolicy('analyzer', () => this.analyzer.analyzeEvents(events))
       );
     } catch (error) {
       console.error('   ✗ Analysis failed:', error);
@@ -520,32 +459,19 @@ export class WeeklyUpdateOrchestrator {
     const breaker = CircuitBreakerFactory.getBreaker('GitHub');
 
     return await breaker.execute(() =>
-      RetryPolicy.execute('github', () =>
-        this.github.createTimelineUpdatePR(events)
-      )
+      executeWithRetryPolicy('github', () => this.github.createTimelineUpdatePR(events))
     );
   }
 
   /**
    * Print execution summary
    */
-  private printSummary(
-    metrics: OrchestratorResult['metrics'],
-    prUrl?: string
-  ): void {
-    console.log(
-      '===================================================='
-    );
+  private printSummary(metrics: OrchestratorResult['metrics'], prUrl?: string): void {
+    console.log('====================================================');
     console.log('📈 Execution Summary');
-    console.log(
-      '===================================================='
-    );
-    console.log(
-      `Total events collected:     ${metrics.totalCollected}`
-    );
-    console.log(
-      `After deduplication:        ${metrics.afterDeduplication}`
-    );
+    console.log('====================================================');
+    console.log(`Total events collected:     ${metrics.totalCollected}`);
+    console.log(`After deduplication:        ${metrics.afterDeduplication}`);
     console.log(`Successfully analyzed:      ${metrics.analyzed}`);
     console.log(`Selected for timeline:      ${metrics.selected}`);
     console.log(`Execution time:             ${metrics.duration}s`);
@@ -555,16 +481,12 @@ export class WeeklyUpdateOrchestrator {
     }
 
     if (this.errors.length > 0) {
-      console.log(
-        `\n⚠️  Errors encountered:       ${this.errors.length}`
-      );
+      console.log(`\n⚠️  Errors encountered:       ${this.errors.length}`);
       this.errors.forEach((err, i) => {
         console.log(`   ${i + 1}. ${err.message}`);
       });
     }
 
-    console.log(
-      '====================================================\n'
-    );
+    console.log('====================================================\n');
   }
 }

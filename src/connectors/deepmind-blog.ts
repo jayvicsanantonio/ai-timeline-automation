@@ -1,18 +1,18 @@
 import axios from 'axios';
-import { load as loadHtml, CheerioAPI } from 'cheerio';
+import { type CheerioAPI, load as loadHtml } from 'cheerio';
 import { NewsSourceError } from '../utils/errors';
 import { AbstractSourceConnector } from './base';
-import { RawItem, SourceConnectorInit, SourceFetchOptions } from './types';
+import type { RawItem, SourceConnectorInit, SourceFetchOptions } from './types';
 
 const DEFAULT_TIMEOUT_MS = 15000;
 
 type JsonLdNode = {
-  ['@type']?: string | string[];
+  '@type'?: string | string[];
   headline?: string;
   name?: string;
   url?: string;
-  mainEntityOfPage?: { ['@id']?: string } | string;
-  ['@id']?: string;
+  mainEntityOfPage?: { '@id'?: string } | string;
+  '@id'?: string;
   datePublished?: string;
   dateCreated?: string;
   description?: string;
@@ -22,7 +22,7 @@ type JsonLdNode = {
 };
 
 type JsonLdAuthor = {
-  ['@type']?: string;
+  '@type'?: string;
   name?: string;
 };
 
@@ -47,8 +47,8 @@ export class DeepMindBlogConnector extends AbstractSourceConnector {
         timeout,
         responseType: 'text',
         headers: {
-          'User-Agent': 'ai-timeline-bot/1.0 (+https://github.com/jayvicsanantonio/ai-timeline)',
-        },
+          'User-Agent': 'ai-timeline-bot/1.0 (+https://github.com/jayvicsanantonio/ai-timeline)'
+        }
       });
 
       const $ = loadHtml(response.data);
@@ -116,7 +116,7 @@ export class DeepMindBlogConnector extends AbstractSourceConnector {
         publishedAt,
         source: this.id,
         summary: summary ? this.normalizeWhitespace(summary) : undefined,
-        authors: this.normalizeAuthorList(authorsText),
+        authors: this.normalizeAuthorList(authorsText)
       });
     });
 
@@ -177,7 +177,7 @@ export class DeepMindBlogConnector extends AbstractSourceConnector {
       publishedAt: new Date(publishedAt).toISOString(),
       source: this.id,
       summary: this.normalizeNullable(node.description ?? node.abstract),
-      authors: this.normalizeJsonLdAuthors(node.author ?? node.creator),
+      authors: this.normalizeJsonLdAuthors(node.author ?? node.creator)
     };
   }
 
@@ -189,7 +189,9 @@ export class DeepMindBlogConnector extends AbstractSourceConnector {
     return trimmed.length > 0 ? trimmed : undefined;
   }
 
-  private normalizeJsonLdAuthors(author: JsonLdAuthor | JsonLdAuthor[] | undefined): string[] | undefined {
+  private normalizeJsonLdAuthors(
+    author: JsonLdAuthor | JsonLdAuthor[] | undefined
+  ): string[] | undefined {
     if (!author) {
       return undefined;
     }

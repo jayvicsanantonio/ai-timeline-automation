@@ -1,20 +1,15 @@
-import { LLMProvider } from './provider';
-import {
+import type { LLMProvider } from './provider';
+import type {
+  LLMBudgetConfig,
   LLMCompletionRequest,
   LLMCompletionResult,
   LLMEmbeddingRequest,
-  LLMEmbeddingResult,
-  LLMBudgetConfig,
-  LLMProviderInit,
+  LLMEmbeddingResult
 } from './types';
 
 export class MockLLMProvider implements LLMProvider {
   readonly id = 'mock_llm';
   readonly model = 'mock-1';
-
-  constructor(_init?: Partial<LLMProviderInit>) {
-    // Mock provider does not require initialization parameters.
-  }
 
   supportsEmbeddings(): boolean {
     return true;
@@ -24,9 +19,7 @@ export class MockLLMProvider implements LLMProvider {
     // Budget limits are not enforced in the mock provider.
   }
 
-  async complete(
-    request: LLMCompletionRequest
-  ): Promise<LLMCompletionResult> {
+  async complete(request: LLMCompletionRequest): Promise<LLMCompletionResult> {
     if (process.env.LLM_DEBUG === 'true') {
       console.log('[MockLLMProvider] Generating completion for request');
     }
@@ -44,17 +37,13 @@ export class MockLLMProvider implements LLMProvider {
       usage: {
         prompt: Math.ceil(userPrompt.length / 4),
         completion: Math.ceil(JSON.stringify(synthesized).length / 4),
-        total: Math.ceil(userPrompt.length / 4) + Math.ceil(JSON.stringify(synthesized).length / 4),
-      },
+        total: Math.ceil(userPrompt.length / 4) + Math.ceil(JSON.stringify(synthesized).length / 4)
+      }
     };
   }
 
-  async embed(
-    request: LLMEmbeddingRequest
-  ): Promise<LLMEmbeddingResult> {
-    const inputs = Array.isArray(request.input)
-      ? request.input
-      : [request.input];
+  async embed(request: LLMEmbeddingRequest): Promise<LLMEmbeddingResult> {
+    const inputs = Array.isArray(request.input) ? request.input : [request.input];
 
     const vectors = inputs.map((input) => this.toUnitVector(input));
 
@@ -64,8 +53,8 @@ export class MockLLMProvider implements LLMProvider {
       usage: {
         prompt: 0,
         completion: 0,
-        total: 0,
-      },
+        total: 0
+      }
     };
   }
 
@@ -73,10 +62,7 @@ export class MockLLMProvider implements LLMProvider {
     const sanitizedPrompt = prompt.replace(/\s+/g, ' ').trim();
     const title = sanitizedPrompt.slice(0, 96) || 'AI development update';
 
-    const baseScore = Math.min(
-      9.3,
-      Math.max(7.2, sanitizedPrompt.length / 200 + 7)
-    );
+    const baseScore = Math.min(9.3, Math.max(7.2, sanitizedPrompt.length / 200 + 7));
 
     const bucketedScore = (offset: number) =>
       Number(Math.min(10, Math.max(0, baseScore + offset)).toFixed(1));
@@ -94,19 +80,13 @@ export class MockLLMProvider implements LLMProvider {
         technologicalBreakthrough: bucketedScore(0.3),
         industryImpact: bucketedScore(-0.2),
         adoptionScale: bucketedScore(-0.1),
-        novelty: bucketedScore(0.4),
+        novelty: bucketedScore(0.4)
       },
       keyInsights:
         insights.length > 0
           ? insights
-          : [
-              'Automated mock analysis summary.',
-              'Use real providers in production environments.',
-            ],
-      relatedTopics:
-        topics.length > 0
-          ? topics
-          : ['ai', 'automation', 'mock-provider'],
+          : ['Automated mock analysis summary.', 'Use real providers in production environments.'],
+      relatedTopics: topics.length > 0 ? topics : ['ai', 'automation', 'mock-provider']
     };
   }
 
@@ -137,14 +117,7 @@ export class MockLLMProvider implements LLMProvider {
       .map(([word]) => word)
       .filter(
         (word) =>
-          ![
-            'https',
-            'http',
-            'httpswww',
-            'introduction',
-            'analysis',
-            'development',
-          ].includes(word)
+          !['https', 'http', 'httpswww', 'introduction', 'analysis', 'development'].includes(word)
       )
       .filter((word, index, array) => array.indexOf(word) === index)
       .slice(0, limit);
@@ -165,7 +138,11 @@ export class MockLLMProvider implements LLMProvider {
   private deriveCategory(text: string): 'research' | 'product' | 'regulation' | 'industry' {
     const sample = text.toLowerCase();
 
-    if (sample.includes('regulation') || sample.includes('compliance') || sample.includes('policy')) {
+    if (
+      sample.includes('regulation') ||
+      sample.includes('compliance') ||
+      sample.includes('policy')
+    ) {
       return 'regulation';
     }
 
@@ -173,7 +150,11 @@ export class MockLLMProvider implements LLMProvider {
       return 'product';
     }
 
-    if (sample.includes('deployment') || sample.includes('partnership') || sample.includes('adoption')) {
+    if (
+      sample.includes('deployment') ||
+      sample.includes('partnership') ||
+      sample.includes('adoption')
+    ) {
       return 'industry';
     }
 

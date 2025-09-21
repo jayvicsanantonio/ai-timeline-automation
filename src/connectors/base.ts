@@ -1,5 +1,11 @@
-import crypto from 'crypto';
-import { SourceConnector, SourceConnectorInit, SourceFetchOptions, RawItem, SourceKind } from './types';
+import crypto from 'node:crypto';
+import type {
+  RawItem,
+  SourceConnector,
+  SourceConnectorInit,
+  SourceFetchOptions,
+  SourceKind
+} from './types';
 
 export abstract class AbstractSourceConnector implements SourceConnector {
   readonly id: string;

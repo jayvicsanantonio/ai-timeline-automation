@@ -3,8 +3,8 @@
  */
 
 export {
-  WeeklyUpdateOrchestrator,
+  NewsCollector,
   OrchestratorConfig,
   OrchestratorResult,
-  NewsCollector
+  WeeklyUpdateOrchestrator
 } from './weekly-update-orchestrator';

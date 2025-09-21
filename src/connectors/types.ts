@@ -1,4 +1,4 @@
-import { SourceConfigEntry } from '../config';
+import type { SourceConfigEntry } from '../config';
 
 export type SourceKind = SourceConfigEntry['kind'];
 

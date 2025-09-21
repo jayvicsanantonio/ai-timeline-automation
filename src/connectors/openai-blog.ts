@@ -1,5 +1,5 @@
-import { SourceConnectorInit } from './types';
-import { RssSourceConnector, RssFeedItem } from './rss-connector';
+import { type RssFeedItem, RssSourceConnector } from './rss-connector';
+import type { SourceConnectorInit } from './types';
 
 export class OpenAIBlogConnector extends RssSourceConnector {
   private readonly displayName: string;
@@ -20,8 +20,8 @@ export class OpenAIBlogConnector extends RssSourceConnector {
       source: this.displayName,
       metadata: {
         ...mapped.metadata,
-        sourceDisplayName: this.displayName,
-      },
+        sourceDisplayName: this.displayName
+      }
     };
   }
 }

@@ -1,12 +1,12 @@
-import {
+import { LLMProviderAggregateError } from './errors';
+import type { LLMProvider } from './provider';
+import type {
   LLMBudgetConfig,
   LLMCompletionRequest,
   LLMCompletionResult,
   LLMEmbeddingRequest,
-  LLMEmbeddingResult,
+  LLMEmbeddingResult
 } from './types';
-import { LLMProvider } from './provider';
-import { LLMProviderAggregateError } from './errors';
 
 export class ChainedLLMProvider implements LLMProvider {
   readonly id: string;
@@ -32,10 +32,7 @@ export class ChainedLLMProvider implements LLMProvider {
       }
     }
 
-    throw new LLMProviderAggregateError(
-      'All LLM providers in the fallback chain failed',
-      errors
-    );
+    throw new LLMProviderAggregateError('All LLM providers in the fallback chain failed', errors);
   }
 
   async embed(request: LLMEmbeddingRequest): Promise<LLMEmbeddingResult> {

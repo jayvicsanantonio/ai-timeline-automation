@@ -2,7 +2,7 @@ import axios from 'axios';
 import Parser from 'rss-parser';
 import { NewsSourceError } from '../utils/errors';
 import { AbstractSourceConnector } from './base';
-import { RawItem, SourceFetchOptions } from './types';
+import type { RawItem, SourceFetchOptions } from './types';
 
 const DEFAULT_TIMEOUT_MS = 15000;
 
@@ -22,8 +22,8 @@ export class RssSourceConnector extends AbstractSourceConnector {
     super(init);
     this.parser = new Parser({
       customFields: {
-        item: ['contentSnippet', 'creator'],
-      },
+        item: ['contentSnippet', 'creator']
+      }
     });
   }
 
@@ -39,8 +39,8 @@ export class RssSourceConnector extends AbstractSourceConnector {
         timeout,
         responseType: 'text',
         headers: {
-          'User-Agent': 'ai-timeline-bot/1.0 (+https://github.com/jayvicsanantonio/ai-timeline)',
-        },
+          'User-Agent': 'ai-timeline-bot/1.0 (+https://github.com/jayvicsanantonio/ai-timeline)'
+        }
       });
 
       const feed = await this.parser.parseString(response.data);
@@ -72,13 +72,12 @@ export class RssSourceConnector extends AbstractSourceConnector {
       publishedAt,
       source: this.id,
       summary: item.contentSnippet?.trim(),
-      authors: this.extractAuthors(item),
+      authors: this.extractAuthors(item)
     };
   }
 
   protected extractAuthors(item: RssFeedItem): string[] | undefined {
-    const authors = item.authors ??
-      (item.creator ? [item.creator] : undefined);
+    const authors = item.authors ?? (item.creator ? [item.creator] : undefined);
 
     return authors?.map((author) => this.normalizeWhitespace(author));
   }

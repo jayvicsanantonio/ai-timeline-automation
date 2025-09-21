@@ -1,10 +1,10 @@
-import {
+import type {
+  LLMBudgetConfig,
   LLMCompletionRequest,
   LLMCompletionResult,
   LLMEmbeddingRequest,
   LLMEmbeddingResult,
-  LLMBudgetConfig,
-  LLMProviderId,
+  LLMProviderId
 } from './types';
 
 export interface LLMProvider {

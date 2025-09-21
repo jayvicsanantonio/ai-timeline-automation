@@ -1,7 +1,7 @@
-import axios, { AxiosResponse } from 'axios';
+import axios, { type AxiosResponse } from 'axios';
 import { NewsSourceError } from '../utils/errors';
 import { AbstractSourceConnector } from './base';
-import { RawItem, SourceConnectorInit, SourceFetchOptions } from './types';
+import type { RawItem, SourceConnectorInit, SourceFetchOptions } from './types';
 
 const DEFAULT_TIMEOUT_MS = 15000;
 
@@ -48,11 +48,10 @@ export class PapersWithCodeConnector extends AbstractSourceConnector {
 
     try {
       while (nextUrl && items.length < maxItems) {
-        const response: AxiosResponse<
-          PapersWithCodeResponse | PapersWithCodeEntry[]
-        > = await axios.get<PapersWithCodeResponse | PapersWithCodeEntry[]>(nextUrl, {
-          timeout,
-        });
+        const response: AxiosResponse<PapersWithCodeResponse | PapersWithCodeEntry[]> =
+          await axios.get<PapersWithCodeResponse | PapersWithCodeEntry[]>(nextUrl, {
+            timeout
+          });
 
         const payload: PapersWithCodeResponse | PapersWithCodeEntry[] = response.data;
         const entries = this.resolveEntries(payload);
@@ -111,13 +110,11 @@ export class PapersWithCodeConnector extends AbstractSourceConnector {
       url: absoluteUrl,
       publishedAt: new Date(publishedAt).toISOString(),
       source: this.id,
-      summary: this.normalizeNullable(
-        entry.summary ?? entry.description ?? entry.paper_abstract
-      ),
+      summary: this.normalizeNullable(entry.summary ?? entry.description ?? entry.paper_abstract),
       authors: this.normalizeAuthors(entry),
       metadata: {
-        repositoryUrl: entry.repository_url,
-      },
+        repositoryUrl: entry.repository_url
+      }
     };
   }
 
@@ -128,13 +125,9 @@ export class PapersWithCodeConnector extends AbstractSourceConnector {
       return undefined;
     }
 
-    const list = Array.isArray(authors)
-      ? authors
-      : authors.split(/,|and/);
+    const list = Array.isArray(authors) ? authors : authors.split(/,|and/);
 
-    const normalized = list
-      .map((author) => this.normalizeWhitespace(author))
-      .filter(Boolean);
+    const normalized = list.map((author) => this.normalizeWhitespace(author)).filter(Boolean);
 
     return normalized.length > 0 ? normalized : undefined;
   }

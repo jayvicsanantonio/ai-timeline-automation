@@ -2,13 +2,13 @@
  * Structured logger with JSON output and correlation IDs
  */
 
-import { randomUUID } from 'crypto';
+import { randomUUID } from 'node:crypto';
 
 export enum LogLevel {
   ERROR = 0,
   WARN = 1,
   INFO = 2,
-  DEBUG = 3,
+  DEBUG = 3
 }
 
 export interface LogContext {
@@ -49,20 +49,15 @@ export class Logger {
     this.logLevel = logLevel;
     this.correlationId = context.correlationId || randomUUID();
     this.context = { ...context, correlationId: this.correlationId };
-    this.outputStream =
-      outputStream || ((entry) => console.log(JSON.stringify(entry)));
+    this.outputStream = outputStream || ((entry) => console.log(JSON.stringify(entry)));
   }
 
   /**
    * Get singleton instance
    */
-  static getInstance(
-    logLevel?: LogLevel,
-    context?: LogContext
-  ): Logger {
+  static getInstance(logLevel?: LogLevel, context?: LogContext): Logger {
     if (!Logger.instance) {
-      const level =
-        logLevel ?? Logger.parseLogLevel(process.env.LOG_LEVEL);
+      const level = logLevel ?? Logger.parseLogLevel(process.env.LOG_LEVEL);
       Logger.instance = new Logger(level, context);
     }
     return Logger.instance;
@@ -77,7 +72,7 @@ export class Logger {
       {
         ...this.context,
         ...context,
-        correlationId: context.correlationId || this.correlationId,
+        correlationId: context.correlationId || this.correlationId
       },
       this.outputStream
     );
@@ -90,7 +85,7 @@ export class Logger {
     return this.child({
       ...context,
       operation,
-      operationId: randomUUID(),
+      operationId: randomUUID()
     });
   }
 
@@ -126,7 +121,7 @@ export class Logger {
       level,
       message,
       correlationId: this.correlationId,
-      context: this.context,
+      context: this.context
     };
 
     if (metadata) {
@@ -137,7 +132,7 @@ export class Logger {
       entry.error = {
         name: error.name,
         message: error.message,
-        stack: error.stack,
+        stack: error.stack
       };
     }
 
@@ -154,18 +149,9 @@ export class Logger {
   /**
    * Log an error
    */
-  error(
-    message: string,
-    error?: Error,
-    metadata?: Record<string, any>
-  ): void {
+  error(message: string, error?: Error, metadata?: Record<string, any>): void {
     if (this.shouldLog(LogLevel.ERROR)) {
-      const entry = this.formatEntry(
-        'ERROR',
-        message,
-        metadata,
-        error
-      );
+      const entry = this.formatEntry('ERROR', message, metadata, error);
       this.outputStream(entry);
     }
   }
@@ -217,16 +203,13 @@ export class Logger {
       url,
       duration,
       status,
-      success: !error && status && status < 400,
+      success: !error && status && status < 400
     };
 
     if (error) {
       this.error(`API call failed: ${service}`, error, metadata);
     } else if (status && status >= 400) {
-      this.warn(
-        `API call returned error status: ${service}`,
-        metadata
-      );
+      this.warn(`API call returned error status: ${service}`, metadata);
     } else {
       this.info(`API call completed: ${service}`, metadata);
     }

@@ -1,8 +1,8 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import nock from 'nock';
 import { DeepMindBlogConnector } from '../deepmind-blog';
-import { SourceConnectorInit, SourceFetchOptions } from '../types';
+import type { SourceConnectorInit, SourceFetchOptions } from '../types';
 
 const BASE_URL = 'https://deepmind.google';
 const BLOG_PATH = '/discover/blog/';
@@ -15,7 +15,7 @@ function readFixture(filename: string): string {
 function buildOptions(): SourceFetchOptions {
   return {
     windowStart: new Date('2025-09-15T00:00:00Z'),
-    windowEnd: new Date('2025-09-21T23:59:59Z'),
+    windowEnd: new Date('2025-09-21T23:59:59Z')
   };
 }
 
@@ -25,11 +25,11 @@ function buildConnector(): DeepMindBlogConnector {
       id: 'deepmind_blog',
       kind: 'html',
       url: `${BASE_URL}${BLOG_PATH}`,
-      enabled: true,
+      enabled: true
     },
     defaults: {
-      timeout_ms: 15000,
-    },
+      timeout_ms: 15000
+    }
   };
 
   return new DeepMindBlogConnector(init);
@@ -61,14 +61,14 @@ describe('DeepMindBlogConnector', () => {
       expect.objectContaining({
         title: 'Alpha Research Achieves New Milestone',
         source: 'deepmind_blog',
-        authors: ['Dr. Ada Lovelace', 'Dr. Alan Turing'],
+        authors: ['Dr. Ada Lovelace', 'Dr. Alan Turing']
       })
     );
     expect(items[1]).toEqual(
       expect.objectContaining({
         title: 'Scaling Agents Responsibly',
         url: 'https://deepmind.google/discover/blog/scaling-agents-responsibly',
-        summary: 'A framework for scaling agents with safety in mind.',
+        summary: 'A framework for scaling agents with safety in mind.'
       })
     );
   });
@@ -86,13 +86,13 @@ describe('DeepMindBlogConnector', () => {
       expect.objectContaining({
         title: 'Robotics Planning with World Models',
         authors: ['Jane Smith'],
-        summary: 'Insights into scaling world model planning for robotics.',
+        summary: 'Insights into scaling world model planning for robotics.'
       })
     );
     expect(items[1]).toEqual(
       expect.objectContaining({
         title: 'Responsible AI Toolkit Updates',
-        authors: ['John Doe', 'Alex Roe'],
+        authors: ['John Doe', 'Alex Roe']
       })
     );
   });

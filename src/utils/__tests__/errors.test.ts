@@ -3,15 +3,15 @@
  */
 
 import {
+  AnalysisError,
   BaseError,
+  ConfigurationError,
+  AggregateError as CustomAggregateError,
+  ErrorHandler,
+  GitHubError,
   NewsSourceError,
   RateLimitError,
-  ValidationError,
-  GitHubError,
-  AnalysisError,
-  ConfigurationError,
-  ErrorHandler,
-  AggregateError,
+  ValidationError
 } from '../errors';
 
 describe('BaseError', () => {
@@ -42,7 +42,7 @@ describe('BaseError', () => {
       message: 'Test error',
       context: { key: 'value' },
       timestamp: expect.any(Date),
-      stack: expect.any(String),
+      stack: expect.any(String)
     });
   });
 });
@@ -167,9 +167,9 @@ describe('ErrorHandler', () => {
     handler.handle(new Error('Test'));
 
     expect(handler.hasErrors()).toBe(true);
-    
+
     handler.clearErrors();
-    
+
     expect(handler.hasErrors()).toBe(false);
     expect(handler.getCollectedErrors()).toHaveLength(0);
   });
@@ -184,7 +184,7 @@ describe('ErrorHandler', () => {
     expect(summary.total).toBe(2);
     expect(summary.byType).toEqual({
       BaseError: 1,
-      ValidationError: 1,
+      ValidationError: 1
     });
   });
 
@@ -200,7 +200,7 @@ describe('ErrorHandler', () => {
 
   it('should calculate retry delay', () => {
     const baseError = new BaseError('Test error');
-    
+
     const delay1 = ErrorHandler.getRetryDelay(baseError, 1);
     const delay2 = ErrorHandler.getRetryDelay(baseError, 2);
 
@@ -211,11 +211,8 @@ describe('ErrorHandler', () => {
 
 describe('AggregateError', () => {
   it('should create aggregate error', () => {
-    const errors = [
-      new BaseError('Error 1'),
-      new ValidationError('field', 'Error 2'),
-    ];
-    const error = new AggregateError('Multiple errors', errors);
+    const errors = [new BaseError('Error 1'), new ValidationError('field', 'Error 2')];
+    const error = new CustomAggregateError('Multiple errors', errors);
 
     expect(error.message).toBe('Multiple errors');
     expect(error.errors).toEqual(errors);
@@ -226,8 +223,8 @@ describe('AggregateError', () => {
     const validationError = new ValidationError('field', 'Validation error');
     const gitHubError = new GitHubError('GitHub error', 'api', 404);
     const errors = [baseError, validationError, gitHubError];
-    
-    const aggregateError = new AggregateError('Multiple errors', errors);
+
+    const aggregateError = new CustomAggregateError('Multiple errors', errors);
 
     const validationErrors = aggregateError.getErrorsOfType(ValidationError);
     const gitHubErrors = aggregateError.getErrorsByType(GitHubError);
@@ -242,32 +239,25 @@ describe('AggregateError', () => {
     const errors = [
       new BaseError('Error 1'),
       new BaseError('Error 2'),
-      new ValidationError('field', 'Validation error'),
+      new ValidationError('field', 'Validation error')
     ];
-    const aggregateError = new AggregateError('Multiple errors', errors);
+    const aggregateError = new CustomAggregateError('Multiple errors', errors);
 
     const summary = aggregateError.getSummary();
 
     expect(summary.total).toBe(3);
     expect(summary.byType).toEqual({
       BaseError: 2,
-      ValidationError: 1,
+      ValidationError: 1
     });
   });
 
   it('should check if has specific error', () => {
-    const errors = [
-      new BaseError('Error 1'),
-      new ValidationError('field', 'Validation error'),
-    ];
-    const aggregateError = new AggregateError('Multiple errors', errors);
+    const errors = [new BaseError('Error 1'), new ValidationError('field', 'Validation error')];
+    const aggregateError = new CustomAggregateError('Multiple errors', errors);
 
-    const hasValidationError = aggregateError.hasError(
-      error => error instanceof ValidationError
-    );
-    const hasGitHubError = aggregateError.hasError(
-      error => error instanceof GitHubError
-    );
+    const hasValidationError = aggregateError.hasError((error) => error instanceof ValidationError);
+    const hasGitHubError = aggregateError.hasError((error) => error instanceof GitHubError);
 
     expect(hasValidationError).toBe(true);
     expect(hasGitHubError).toBe(false);

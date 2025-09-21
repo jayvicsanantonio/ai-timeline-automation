@@ -1,5 +1,7 @@
 import { retry } from '../utils/retry';
-import {
+import { LLMBudgetExceededError, LLMProviderError } from './errors';
+import type { LLMProvider } from './provider';
+import type {
   LLMBudgetConfig,
   LLMCompletionRequest,
   LLMCompletionResult,
@@ -7,10 +9,8 @@ import {
   LLMEmbeddingResult,
   LLMProviderId,
   LLMProviderInit,
-  LLMTokens,
+  LLMTokens
 } from './types';
-import { LLMProvider } from './provider';
-import { LLMBudgetExceededError, LLMProviderError } from './errors';
 
 export abstract class BaseLLMProvider implements LLMProvider {
   protected promptTokensConsumed = 0;
@@ -28,7 +28,7 @@ export abstract class BaseLLMProvider implements LLMProvider {
     initialDelay: 250,
     maxDelay: 4000,
     factor: 2,
-    jitter: 0.2,
+    jitter: 0.2
   };
   protected readonly timeoutMs: number;
 
@@ -76,7 +76,7 @@ export abstract class BaseLLMProvider implements LLMProvider {
         initialDelay: this.retryConfig.initialDelay,
         maxDelay: this.retryConfig.maxDelay,
         jitter: this.retryConfig.jitter,
-        factor: 2,
+        factor: 2
       });
     } catch (error) {
       throw new LLMProviderError(
@@ -101,7 +101,7 @@ export abstract class BaseLLMProvider implements LLMProvider {
         initialDelay: this.retryConfig.initialDelay,
         maxDelay: this.retryConfig.maxDelay,
         jitter: this.retryConfig.jitter,
-        factor: 2,
+        factor: 2
       });
     } catch (error) {
       throw new LLMProviderError(
@@ -148,15 +148,11 @@ export abstract class BaseLLMProvider implements LLMProvider {
     return {
       providerId: this.providerId,
       model: this.providerModel,
-      correlationId,
+      correlationId
     };
   }
 
-  protected abstract doComplete(
-    request: LLMCompletionRequest
-  ): Promise<LLMCompletionResult>;
+  protected abstract doComplete(request: LLMCompletionRequest): Promise<LLMCompletionResult>;
 
-  protected abstract doEmbed(
-    request: LLMEmbeddingRequest
-  ): Promise<LLMEmbeddingResult>;
+  protected abstract doEmbed(request: LLMEmbeddingRequest): Promise<LLMEmbeddingResult>;
 }
