@@ -2,6 +2,7 @@ default_provider: openai_gpt5_low
 fallback_chain:
   - openai_gpt4o_mini
   - local_gguf_small
+  - mock_llm
 temperature: 0.2
 top_p: 1.0
 max_tokens: 1200

@@ -7,60 +7,7 @@
 import * as fs from 'fs';
 import { config, loadConfig, validateConfig } from './config';
 import { WeeklyUpdateOrchestrator, OrchestratorResult } from './orchestrator';
-import { HackerNewsCollector } from './collectors/hackernews';
-import { ArXivCollector } from './collectors/arxiv';
-import { RSSCollector } from './collectors/rss';
-import { DEFAULT_RATE_LIMIT, SourceReliability } from './types';
 import { ConfigurationError } from './utils/errors';
-
-/**
- * Initialize collectors based on configuration
- */
-function initializeCollectors(sources: string[]) {
-  const collectors = [];
-  
-  for (const source of sources) {
-    switch (source.toLowerCase()) {
-      case 'hackernews':
-      case 'hn':
-        collectors.push(new HackerNewsCollector());
-        break;
-      
-      case 'arxiv':
-        collectors.push(new ArXivCollector());
-        break;
-      
-      case 'rss': {
-        // Initialize with default RSS feeds
-        const rssFeeds = [
-          { url: 'https://openai.com/blog/rss.xml', sourceName: 'OpenAI Blog' },
-          { url: 'https://blog.google/technology/ai/rss', sourceName: 'Google AI Blog' },
-          { url: 'https://news.mit.edu/rss/topic/artificial-intelligence2', sourceName: 'MIT News AI' },
-        ];
-        
-        rssFeeds.forEach(feed => {
-          const url = new URL(feed.url);
-          const origin = `${url.protocol}//${url.host}`;
-          const name = `RSS-${url.hostname}`;
-          collectors.push(new RSSCollector(name, {
-            enabled: true,
-            baseUrl: origin,
-            rateLimit: DEFAULT_RATE_LIMIT,
-            reliability: SourceReliability.JOURNALISM,
-            feedUrl: feed.url,
-            sourceName: feed.sourceName,
-          }));
-        });
-        break;
-      }
-      
-      default:
-        console.warn(`Unknown news source: ${source}`);
-    }
-  }
-  
-  return collectors;
-}
 
 /**
  * Write execution summary to file for GitHub Actions
@@ -129,25 +76,12 @@ async function main(): Promise<void> {
       timelineRepo: appConfig.timelineRepo.full,
       maxEventsPerWeek: appConfig.maxEventsPerWeek,
       significanceThreshold: appConfig.significanceThreshold,
-      githubToken: appConfig.githubToken
+      githubToken: appConfig.githubToken,
+      dryRun: appConfig.dryRun
     });
     
-    // Step 3: Register collectors
-    console.log('📡 Registering news collectors...');
-    const collectors = initializeCollectors(appConfig.newsSources);
-    
-    if (collectors.length === 0) {
-      throw new Error('No news collectors initialized');
-    }
-    
-    collectors.forEach(collector => {
-      orchestrator.registerCollector(collector);
-    });
-    
-    console.log(`✅ Registered ${collectors.length} collectors\n`);
-    
-    // Step 4: Run the weekly update
-    console.log('🎯 Running weekly update workflow...\n');
+    // Step 3: Run the update (connectors are loaded from config at runtime)
+    console.log('🎯 Running daily update workflow...\n');
     const result = await orchestrator.run();
     
     // Step 5: Write summary for GitHub Actions
@@ -155,7 +89,7 @@ async function main(): Promise<void> {
     
     // Step 6: Handle results
     if (result.success) {
-      console.log('✅ Weekly update completed successfully!');
+      console.log('✅ AI timeline update completed successfully!');
       
       if (result.prUrl) {
         console.log(`📌 Pull Request: ${result.prUrl}`);
@@ -171,7 +105,7 @@ async function main(): Promise<void> {
       
       process.exit(0);
     } else {
-      console.error('⚠️ Weekly update completed with warnings');
+      console.error('⚠️ AI timeline update completed with warnings');
       
       if (result.errors.length > 0) {
         console.error('\nErrors encountered:');

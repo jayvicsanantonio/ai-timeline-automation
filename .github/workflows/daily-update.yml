@@ -1,9 +1,9 @@
-name: Weekly AI Timeline Update
+name: Daily AI Timeline Update
 
 on:
   schedule:
-    # Run every Sunday at 00:00 UTC
-    - cron: '0 0 * * 0'
+    # Run every day at 06:00 UTC
+    - cron: '0 6 * * *'
 
   workflow_dispatch:
     inputs:
@@ -89,27 +89,19 @@ jobs:
           echo "  - Log Level: $LOG_LEVEL"
           echo ""
           
-          # Run the update and capture output
           npm run update 2>&1 | tee timeline-update.log
           
           echo ""
           echo "📅 Completed AI Timeline Update at $(date)"
         env:
-          # Required secrets
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GIT_TOKEN: ${{ secrets.GH_PAT || secrets.GIT_TOKEN }}
-
-          # Configuration
           TIMELINE_REPO: ${{ vars.TIMELINE_REPO }}
           MAX_EVENTS_PER_WEEK: ${{ github.event.inputs.max_events || '3' }}
           SIGNIFICANCE_THRESHOLD: ${{ github.event.inputs.significance_threshold || '7.0' }}
           DRY_RUN: ${{ github.event.inputs.dry_run || vars.DRY_RUN || 'false' }}
-
-          # Optional configuration
           NEWS_SOURCES: ${{ vars.NEWS_SOURCES || 'hackernews,arxiv,rss' }}
           LOG_LEVEL: ${{ vars.LOG_LEVEL || 'info' }}
-
-          # API Keys for news sources (optional)
           HACKERNEWS_API_KEY: ${{ secrets.HACKERNEWS_API_KEY }}
           ARXIV_API_KEY: ${{ secrets.ARXIV_API_KEY }}
 
@@ -135,7 +127,7 @@ jobs:
             if (fs.existsSync(summaryPath)) {
               const summary = JSON.parse(fs.readFileSync(summaryPath, 'utf8'));
 
-              const comment = `## 🤖 Weekly AI Timeline Update - Run #${context.runNumber}
+              const comment = `## 🤖 Daily AI Timeline Update - Run #${context.runNumber}
 
               ### 📊 Summary
               - **Events Collected**: ${summary.metrics.totalCollected}
@@ -167,7 +159,7 @@ jobs:
         with:
           script: |
             const title = `AI Timeline Update Failed - Run #${context.runNumber}`;
-            const body = `The weekly AI timeline update has failed.
+            const body = `The daily AI timeline update has failed.
 
             **Run ID**: ${context.runId}
             **Triggered by**: ${context.eventName}
@@ -185,9 +177,8 @@ jobs:
               labels: ['bug', 'automation-failure']
             });
 
-  # Optional: Run tests before the main job
   test:
-    name: Run Tests
+    name: Run Tests (manual only)
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch'
 

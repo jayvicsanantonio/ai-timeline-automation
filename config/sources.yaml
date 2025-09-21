@@ -1,4 +1,4 @@
-window_days: 3
+window_days: 7
 defaults:
   rate_limit_qpm: 30
   timeout_ms: 15000
@@ -24,7 +24,7 @@ sources:
   - id: anthropic
     kind: rss
     url: https://www.anthropic.com/news.xml
-    enabled: true
+    enabled: false
   - id: huggingface
     kind: rss
     url: https://huggingface.co/blog/feed.xml

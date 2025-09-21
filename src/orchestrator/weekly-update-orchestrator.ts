@@ -2,6 +2,7 @@
  * WeeklyUpdateOrchestrator - Coordinates the weekly workflow
  */
 
+import { randomUUID } from 'crypto';
 import { AnalyzedEvent, RawEvent } from '../types';
 import { EventAnalyzer } from '../analyzers';
 import { GitHubManager } from '../github';
@@ -12,6 +13,12 @@ import {
   RetryPolicies,
   AggregateError,
 } from '../utils';
+import {
+  bootstrapConnectors,
+  computeIngestionWindow,
+  RawItem,
+} from '../connectors';
+import { loadPipelineConfig, PipelineConfig } from '../config';
 
 export interface OrchestratorConfig {
   timelineRepo: string; // format: owner/repo
@@ -19,11 +26,18 @@ export interface OrchestratorConfig {
   significanceThreshold?: number; // default 7.0
   newsSources?: string[]; // names of enabled sources
   githubToken?: string;
+  dryRun?: boolean;
 }
 
 export interface NewsCollector {
   name: string;
   fetchEvents(): Promise<RawEvent[]>;
+}
+
+interface ConnectorIngestionSummary {
+  id: string;
+  itemCount: number;
+  latencyMs: number;
 }
 
 export interface OrchestratorResult {
@@ -48,6 +62,7 @@ export class WeeklyUpdateOrchestrator {
   private readonly collectors: Map<string, NewsCollector> = new Map();
   private readonly maxEventsPerWeek: number;
   private readonly significanceThreshold: number;
+  private readonly dryRun: boolean;
   private readonly errors: Error[] = [];
 
   constructor(
@@ -83,6 +98,7 @@ export class WeeklyUpdateOrchestrator {
 
     this.maxEventsPerWeek = config.maxEventsPerWeek || 3;
     this.significanceThreshold = config.significanceThreshold || 7.0;
+    this.dryRun = config.dryRun ?? false;
 
     // Configure retry policies for different services
     RetryPolicy.register('collector', RetryPolicies.standard);
@@ -152,23 +168,41 @@ export class WeeklyUpdateOrchestrator {
     console.log(
       `   - Significance threshold: ${this.significanceThreshold}`
     );
-    console.log(
-      `   - Collectors: ${Array.from(this.collectors.keys()).join(
-        ', '
-      )}`
-    );
-    console.log(
-      '====================================================\n'
-    );
+    console.log('====================================================\n');
 
     try {
-      // Step 1: Collect events from all sources
-      console.log(
-        '📊 Step 1: Collecting events from news sources...'
-      );
-      const collected = await this.collectAllEvents();
-      metrics.totalCollected = collected.length;
-      console.log(`   ✓ Collected ${collected.length} raw events\n`);
+      // Step 1: Collect events via config-driven connectors
+      console.log('📊 Step 1: Collecting events from configured sources...');
+      const ingestion = await this.collectFromConfigSources();
+
+      let collected: RawEvent[];
+      if (ingestion) {
+        collected = ingestion.events;
+        metrics.totalCollected = collected.length;
+        console.log(
+          `   ✓ Collected ${ingestion.totalBeforeLimit} items across ${ingestion.connectorSummaries.length} sources`
+        );
+        if (ingestion.totalBeforeLimit !== collected.length) {
+          console.log(
+            `   ✓ Trimmed to ${collected.length} items per pipeline limits`
+          );
+        }
+        ingestion.connectorSummaries.forEach((summary) => {
+          console.log(
+            `     - ${summary.id}: ${summary.itemCount} items in ${summary.latencyMs}ms`
+          );
+        });
+        console.log(
+          `   ✓ Window: ${ingestion.windowStart.toISOString()} -> ${ingestion.windowEnd.toISOString()}\n`
+        );
+      } else {
+        console.log(
+          '   ⚠️ No config-driven connectors found, falling back to legacy collectors'
+        );
+        collected = await this.collectAllEvents();
+        metrics.totalCollected = collected.length;
+        console.log(`   ✓ Collected ${collected.length} raw events\n`);
+      }
 
       if (collected.length === 0) {
         console.log('⚠️  No events collected. Exiting.');
@@ -229,14 +263,18 @@ export class WeeklyUpdateOrchestrator {
       // Step 5: Create PR if we have events
       let prUrl: string | undefined;
       if (finalSelected.length > 0) {
-        console.log('📝 Step 5: Creating GitHub pull request...');
-        try {
-          const pr = await this.createPullRequest(finalSelected);
-          prUrl = pr.url;
-          console.log(`   ✓ Pull request created: ${prUrl}\n`);
-        } catch (error) {
-          console.error('   ✗ Failed to create pull request:', error);
-          this.errors.push(error as Error);
+        if (this.dryRun) {
+          console.log('🛑 Step 5: Dry run mode — skipping PR creation\n');
+        } else {
+          console.log('📝 Step 5: Creating GitHub pull request...');
+          try {
+            const pr = await this.createPullRequest(finalSelected);
+            prUrl = pr.url;
+            console.log(`   ✓ Pull request created: ${prUrl}\n`);
+          } catch (error) {
+            console.error('   ✗ Failed to create pull request:', error);
+            this.errors.push(error as Error);
+          }
         }
       } else {
         console.log(
@@ -249,7 +287,8 @@ export class WeeklyUpdateOrchestrator {
       this.printSummary(metrics, prUrl);
 
       return {
-        success: finalSelected.length > 0 && !!prUrl,
+        success:
+          finalSelected.length > 0 && (this.dryRun ? true : !!prUrl),
         analyzed,
         selected: finalSelected,
         prUrl,
@@ -322,6 +361,133 @@ export class WeeklyUpdateOrchestrator {
     }
 
     return flatResults;
+  }
+
+  private async collectFromConfigSources(): Promise<{
+    events: RawEvent[];
+    totalBeforeLimit: number;
+    connectorSummaries: ConnectorIngestionSummary[];
+    windowStart: Date;
+    windowEnd: Date;
+  } | null> {
+    let pipelineConfig: PipelineConfig;
+    try {
+      pipelineConfig = await loadPipelineConfig();
+    } catch (error) {
+      console.error('Unable to load pipeline configuration:', error);
+      this.errors.push(error instanceof Error ? error : new Error(String(error)));
+      return null;
+    }
+
+    const { connectors, windowDays } = await bootstrapConnectors();
+    if (connectors.length === 0) {
+      console.warn('No connectors defined in configuration.');
+      return null;
+    }
+
+    const { windowStart, windowEnd } = computeIngestionWindow(windowDays);
+    const correlationId = typeof randomUUID === 'function'
+      ? randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    const maxPerSource = pipelineConfig.limits?.max_items_per_source ?? 20;
+
+    const results = await Promise.all(
+      connectors.map(async (connector) => {
+        const startedAt = Date.now();
+        try {
+          const items = await connector.fetch({
+            windowStart,
+            windowEnd,
+            maxItems: maxPerSource,
+            correlationId,
+          });
+          const events = items.map((item) => this.rawItemToRawEvent(item));
+          return {
+            id: connector.id,
+            events,
+            latencyMs: Date.now() - startedAt,
+          };
+        } catch (error) {
+          const latencyMs = Date.now() - startedAt;
+          console.error(`Error fetching from ${connector.id}:`, error);
+          this.errors.push(error instanceof Error ? error : new Error(String(error)));
+          return {
+            id: connector.id,
+            events: [] as RawEvent[],
+            latencyMs,
+          };
+        }
+      })
+    );
+
+    const allEvents = results.flatMap((result) => result.events);
+
+    const totalBeforeLimit = allEvents.length;
+    allEvents.sort(
+      (a, b) => b.date.getTime() - a.date.getTime()
+    );
+
+    const maxPerRun = pipelineConfig.limits?.max_items_per_run;
+    const limitedEvents =
+      typeof maxPerRun === 'number'
+        ? allEvents.slice(0, maxPerRun)
+        : allEvents;
+
+    const connectorSummaries: ConnectorIngestionSummary[] = results.map(
+      ({ id, events, latencyMs }) => ({
+        id,
+        itemCount: events.length,
+        latencyMs,
+      })
+    );
+
+    return {
+      events: limitedEvents,
+      totalBeforeLimit,
+      connectorSummaries,
+      windowStart,
+      windowEnd,
+    };
+  }
+
+  private rawItemToRawEvent(item: RawItem): RawEvent {
+    const publishedAt = item.publishedAt
+      ? new Date(item.publishedAt)
+      : new Date();
+    const eventDate = Number.isNaN(publishedAt.getTime())
+      ? new Date()
+      : publishedAt;
+
+    const summaryContent =
+      item.summary && item.summary.trim().length > 0
+        ? item.summary.trim()
+        : undefined;
+
+    const metadata: Record<string, unknown> = {
+      ...item.metadata,
+      raw_item_id: item.id,
+      source_id: item.source,
+    };
+
+    if (summaryContent) {
+      metadata.summary = summaryContent;
+    }
+
+    if (item.authors && item.authors.length > 0) {
+      metadata.authors = item.authors;
+    }
+
+    const content = summaryContent ?? item.title;
+
+    return {
+      title: item.title,
+      date: eventDate,
+      source: item.source,
+      url: item.url,
+      content,
+      metadata,
+    };
   }
 
   /**

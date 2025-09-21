@@ -11,6 +11,7 @@ import {
 import { OpenAIGPT5LowProvider } from './openai-gpt5-low-provider';
 import { OpenAIGPT4OMiniProvider } from './openai-gpt4o-mini-provider';
 import { LocalGGUFProvider } from './local-gguf-provider';
+import { MockLLMProvider } from './mock-provider';
 import { LLMProviderError } from './errors';
 
 export interface LLMFactoryOptions {
@@ -27,20 +28,33 @@ const PROVIDER_CONSTRUCTORS: Record<LLMProviderId, ProviderConstructor> = {
   openai_gpt5_low: (options) => new OpenAIGPT5LowProvider(options),
   openai_gpt4o_mini: (options) => new OpenAIGPT4OMiniProvider(options),
   local_gguf_small: (options) => new LocalGGUFProvider(options),
+  mock_llm: (options) => new MockLLMProvider(options),
 };
 
 const PROVIDER_MODEL_DEFAULTS: Record<LLMProviderId, string> = {
   openai_gpt5_low: 'gpt-5.0-low',
   openai_gpt4o_mini: 'gpt-4o-mini',
   local_gguf_small: 'local-gguf-small',
+  mock_llm: 'mock-1',
 };
+
+const KNOWN_PROVIDERS: LLMProviderId[] = [
+  'openai_gpt5_low',
+  'openai_gpt4o_mini',
+  'local_gguf_small',
+  'mock_llm',
+];
+
+function isKnownProvider(id: string): id is LLMProviderId {
+  return KNOWN_PROVIDERS.includes(id as LLMProviderId);
+}
 
 function resolveApiKey(providerId: LLMProviderId, explicit?: string): string | undefined {
   if (explicit) {
     return explicit;
   }
 
-  if (providerId === 'local_gguf_small') {
+  if (providerId === 'local_gguf_small' || providerId === 'mock_llm') {
     return undefined;
   }
 
@@ -126,7 +140,7 @@ async function instantiateProvider(
 
   const apiKey = resolveApiKey(providerId, options.apiKey);
 
-  if (!apiKey && providerId !== 'local_gguf_small') {
+  if (!apiKey && providerId !== 'local_gguf_small' && providerId !== 'mock_llm') {
     throw new LLMProviderError('Missing OPENAI_API_KEY for OpenAI provider', {
       providerId,
     });
@@ -141,10 +155,26 @@ export async function createLLMProvider(
 ): Promise<LLMProvider> {
   const config = normalizeConfig(await loadLlmConfig(options.configPath));
 
-  const providerChain: LLMProviderId[] = [
-    config.default_provider as LLMProviderId,
-    ...config.fallback_chain.map((id) => id as LLMProviderId),
-  ];
+  const envOverrideRaw = process.env.LLM_PROVIDER?.trim();
+  const envOverride = envOverrideRaw && isKnownProvider(envOverrideRaw)
+    ? (envOverrideRaw as LLMProviderId)
+    : undefined;
+
+  const requestedChain = [
+    ...(envOverride ? [envOverride] : []),
+    config.default_provider,
+    ...config.fallback_chain,
+  ]
+    .map((id) => id.trim())
+    .filter((id) => isKnownProvider(id));
+
+  const providerChain: LLMProviderId[] = requestedChain.filter(
+    (id, index) => requestedChain.indexOf(id) === index
+  ) as LLMProviderId[];
+
+  if (process.env.LLM_DEBUG === 'true') {
+    console.log('[LLM] Provider chain:', providerChain.join(' -> '));
+  }
 
   const providers: LLMProvider[] = [];
   const errors: Error[] = [];
@@ -152,8 +182,14 @@ export async function createLLMProvider(
   for (const providerId of providerChain) {
     try {
       const provider = await instantiateProvider(providerId, config, options);
+      if (process.env.LLM_DEBUG === 'true') {
+        console.log('[LLM] Instantiated provider:', providerId);
+      }
       providers.push(provider);
     } catch (error) {
+      if (process.env.LLM_DEBUG === 'true') {
+        console.warn('[LLM] Provider instantiation failed:', providerId, '-', (error as Error).message);
+      }
       errors.push(error instanceof Error ? error : new Error(String(error)));
     }
   }

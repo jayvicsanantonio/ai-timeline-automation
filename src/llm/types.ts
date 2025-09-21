@@ -1,7 +1,8 @@
 export type LLMProviderId =
   | 'openai_gpt5_low'
   | 'openai_gpt4o_mini'
-  | 'local_gguf_small';
+  | 'local_gguf_small'
+  | 'mock_llm';
 
 export interface LLMMessage {
   role: 'system' | 'user' | 'assistant';
