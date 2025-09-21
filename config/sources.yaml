@@ -1,0 +1,35 @@
+window_days: 3
+defaults:
+  rate_limit_qpm: 30
+  timeout_ms: 15000
+sources:
+  - id: arxiv
+    kind: rss
+    url: https://arxiv.org/rss/cs.AI
+    rate_limit_qpm: 30
+    enabled: true
+  - id: deepmind_blog
+    kind: html
+    url: https://deepmind.google/discover/blog/
+    enabled: true
+    metadata:
+      source_name: DeepMind Blog
+  - id: openai_blog
+    kind: rss
+    url: https://openai.com/blog/rss.xml
+    rate_limit_qpm: 20
+    enabled: true
+    metadata:
+      source_name: OpenAI Blog
+  - id: anthropic
+    kind: rss
+    url: https://www.anthropic.com/news.xml
+    enabled: true
+  - id: huggingface
+    kind: rss
+    url: https://huggingface.co/blog/feed.xml
+    enabled: true
+  - id: paperswithcode
+    kind: api
+    url: https://paperswithcode.com/api/latest
+    enabled: false

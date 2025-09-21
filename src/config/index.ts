@@ -269,3 +269,18 @@ export function validateConfig(): {
 } {
   return config.validate();
 }
+
+export {
+  clearConfigCache,
+  getConfigRoot,
+  loadLlmConfig,
+  loadPipelineConfig,
+  loadSourcesConfig,
+} from './yaml-loader';
+
+export type {
+  LlmFile as LlmConfig,
+  PipelineFile as PipelineConfig,
+  SourceConfigEntry,
+  SourcesFile as SourcesConfig,
+} from './yaml-types';
