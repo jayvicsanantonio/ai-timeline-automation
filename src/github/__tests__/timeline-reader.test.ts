@@ -14,6 +14,7 @@ describe('TimelineReader', () => {
   let mockOctokit: {
     repos: {
       getContent: jest.MockedFunction<any>;
+      getBranch: jest.MockedFunction<any>;
     };
   };
 
@@ -27,7 +28,7 @@ describe('TimelineReader', () => {
       }
     };
 
-    (Octokit as jest.MockedClass<typeof Octokit>).mockImplementation(() => mockOctokit as unknown);
+    (Octokit as jest.MockedClass<typeof Octokit>).mockImplementation(() => mockOctokit as any);
 
     reader = new TimelineReader({
       owner: 'test-owner',

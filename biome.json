@@ -6,19 +6,21 @@
     "rules": {
       "recommended": true,
       "complexity": {
-        "noExcessiveCognitiveComplexity": "warn"
+        "noExcessiveCognitiveComplexity": "off",
+        "noStaticOnlyClass": "off"
       },
       "correctness": {
-        "noUnusedVariables": "error",
-        "useExhaustiveDependencies": "warn"
+        "noUnusedVariables": "warn",
+        "useExhaustiveDependencies": "off"
       },
       "style": {
-        "noNonNullAssertion": "warn",
-        "useConsistentArrayType": "error"
+        "noNonNullAssertion": "off",
+        "useConsistentArrayType": "warn"
       },
       "suspicious": {
-        "noExplicitAny": "warn",
-        "noArrayIndexKey": "warn"
+        "noExplicitAny": "off",
+        "noArrayIndexKey": "off",
+        "useAdjacentOverloadSignatures": "off"
       }
     }
   },

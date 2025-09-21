@@ -90,7 +90,7 @@ describe('GitHubManager', () => {
     };
 
     (Octokit as jest.MockedClass<typeof Octokit>).mockImplementation(
-      () => mockOctokitInstance as unknown
+      () => mockOctokitInstance as any
     );
 
     manager = new GitHubManager(mockConfig);

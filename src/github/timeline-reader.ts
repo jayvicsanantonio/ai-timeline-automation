@@ -102,7 +102,7 @@ export class TimelineReader {
       console.log(`Successfully fetched ${validatedData.entries.length} existing events`);
 
       return {
-        events: validatedData.entries,
+        events: validatedData.entries as TimelineEntry[],
         sha: response.data.sha,
         content
       };
@@ -296,8 +296,12 @@ export class TimelineReader {
     const words1 = new Set(s1.split(/\s+/));
     const words2 = new Set(s2.split(/\s+/));
 
-    const intersection = new Set([...words1].filter((x) => words2.has(x)));
-    const union = new Set([...words1, ...words2]);
+    // Convert sets to arrays for ES5 compatibility
+    const words1Array = Array.from(words1);
+    const words2Array = Array.from(words2);
+
+    const intersection = new Set(words1Array.filter((x) => words2.has(x)));
+    const union = new Set(words1Array.concat(words2Array));
 
     return intersection.size / union.size;
   }
