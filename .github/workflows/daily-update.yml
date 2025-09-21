@@ -100,7 +100,6 @@ jobs:
           MAX_EVENTS_PER_WEEK: ${{ github.event.inputs.max_events || '3' }}
           SIGNIFICANCE_THRESHOLD: ${{ github.event.inputs.significance_threshold || '7.0' }}
           DRY_RUN: ${{ github.event.inputs.dry_run || vars.DRY_RUN || 'false' }}
-          NEWS_SOURCES: ${{ vars.NEWS_SOURCES || 'hackernews,arxiv,rss' }}
           LOG_LEVEL: ${{ vars.LOG_LEVEL || 'info' }}
           HACKERNEWS_API_KEY: ${{ secrets.HACKERNEWS_API_KEY }}
           ARXIV_API_KEY: ${{ secrets.ARXIV_API_KEY }}
@@ -204,3 +203,4 @@ jobs:
           name: coverage-report
           path: coverage/
           retention-days: 7
+          if-no-files-found: ignore
