@@ -150,7 +150,7 @@ export class GitHubManager {
       // Create pull request
       const pr = await this.createPullRequest(
         branchName,
-        `Weekly AI Timeline Update - Week ${weekNumber}, ${year}`,
+        `AI Timeline Update - Week ${weekNumber}, ${year}`,
         description
       );
 
@@ -322,7 +322,7 @@ export class GitHubManager {
   ): string {
     const lines: string[] = [];
 
-    lines.push('## 🤖 Weekly AI Timeline Update\n');
+    lines.push('## 🤖 Daily AI Timeline Update\n');
     lines.push(
       `This automated PR adds ${addedEntries.length} significant AI developments to the timeline.\n`
     );
@@ -373,8 +373,9 @@ export class GitHubManager {
 
       if (event.sources && event.sources.length > 0) {
         lines.push('**Sources:**');
-        event.sources.forEach((source) => {
-          lines.push(`- ${source}`);
+        event.sources.forEach((source, sourceIndex) => {
+          const label = event.sources.length > 1 ? `Source ${sourceIndex + 1}` : 'Source';
+          lines.push(`- [${label}](${source})`);
         });
         lines.push('');
       }

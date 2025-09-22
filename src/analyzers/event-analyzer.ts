@@ -166,7 +166,7 @@ export class EventAnalyzer {
           date: event.date.toISOString(),
           description: analysis.description,
           category: analysis.category as EventCategory,
-          sources: event.source ? [event.source] : [],
+          sources: [event.url].filter(Boolean),
           url: event.url,
           impactScore,
           significance: analysis.significance,
@@ -374,11 +374,11 @@ export class EventAnalyzer {
       return 'No significant events found this week.';
     }
 
-    const lines = ['## Weekly AI Timeline Update\n'];
+    const lines = ['## Daily AI Timeline Update\n'];
     lines.push(
       `Selected ${events.length} significant AI development${
         events.length > 1 ? 's' : ''
-      } from this week:\n`
+      } in this run:\n`
     );
 
     events.forEach((event, index) => {

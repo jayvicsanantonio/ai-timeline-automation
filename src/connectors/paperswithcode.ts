@@ -94,21 +94,22 @@ export class PapersWithCodeConnector extends AbstractSourceConnector {
   private mapEntry(entry: PapersWithCodeEntry): RawItem | undefined {
     const title = entry.title ?? entry.paper_title;
     const url = entry.url_abs ?? entry.url ?? entry.paper_url ?? entry.repository_url;
-    const publishedAt = entry.published_at ?? entry.created_at;
+    const publishedAtRaw = entry.published_at ?? entry.created_at;
 
-    if (!title || !url || !publishedAt) {
+    if (!title || !url || !publishedAtRaw) {
       return undefined;
     }
 
     const absoluteUrl = this.toAbsoluteUrl(url);
     const fingerprint = this.generateDeterministicId(`${this.id}:${absoluteUrl}`);
+    const publishedAt = this.resolvePublishedAt(publishedAtRaw);
     const datePrefix = new Date(publishedAt).toISOString().slice(0, 10);
 
     return {
       id: `${datePrefix}-${this.id}-${fingerprint.slice(0, 6)}`,
       title: this.normalizeWhitespace(title),
       url: absoluteUrl,
-      publishedAt: new Date(publishedAt).toISOString(),
+      publishedAt,
       source: this.id,
       summary: this.normalizeNullable(entry.summary ?? entry.description ?? entry.paper_abstract),
       authors: this.normalizeAuthors(entry),
@@ -147,5 +148,16 @@ export class PapersWithCodeConnector extends AbstractSourceConnector {
     } catch {
       return this.sanitizeUrl(url);
     }
+  }
+
+  private resolvePublishedAt(raw: string): string {
+    const parsed = new Date(raw);
+
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toISOString();
+    }
+
+    console.warn(`PapersWithCodeConnector received unparsable date "${raw}", using current time.`);
+    return new Date().toISOString();
   }
 }

@@ -104,7 +104,7 @@ export class DeepMindBlogConnector extends AbstractSourceConnector {
         return;
       }
 
-      const publishedAt = datetime ? new Date(datetime).toISOString() : new Date().toISOString();
+      const publishedAt = this.resolvePublishedAt(datetime);
       const absoluteUrl = this.toAbsoluteUrl(link);
       const fingerprint = this.generateDeterministicId(`${this.id}:${absoluteUrl}`);
       const datePrefix = new Date(publishedAt).toISOString().slice(0, 10);
@@ -160,21 +160,22 @@ export class DeepMindBlogConnector extends AbstractSourceConnector {
         ? node.mainEntityOfPage
         : node.mainEntityOfPage?.['@id']) ??
       node['@id'];
-    const publishedAt = node.datePublished ?? node.dateCreated;
+    const publishedAtRaw = node.datePublished ?? node.dateCreated;
 
-    if (!title || !url || !publishedAt) {
+    if (!title || !url || !publishedAtRaw) {
       return undefined;
     }
 
     const absoluteUrl = this.toAbsoluteUrl(url);
     const fingerprint = this.generateDeterministicId(`${this.id}:${absoluteUrl}`);
+    const publishedAt = this.resolvePublishedAt(publishedAtRaw);
     const datePrefix = new Date(publishedAt).toISOString().slice(0, 10);
 
     return {
       id: `${datePrefix}-${this.id}-${fingerprint.slice(0, 6)}`,
       title: this.normalizeWhitespace(title),
       url: absoluteUrl,
-      publishedAt: new Date(publishedAt).toISOString(),
+      publishedAt,
       source: this.id,
       summary: this.normalizeNullable(node.description ?? node.abstract),
       authors: this.normalizeJsonLdAuthors(node.author ?? node.creator)
@@ -234,5 +235,17 @@ export class DeepMindBlogConnector extends AbstractSourceConnector {
       }
     }
     return Array.from(map.values());
+  }
+
+  private resolvePublishedAt(raw?: string): string {
+    if (raw) {
+      const parsed = new Date(raw);
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed.toISOString();
+      }
+      console.warn(`DeepMindBlogConnector received unparsable date "${raw}", using current time.`);
+    }
+
+    return new Date().toISOString();
   }
 }

@@ -1,6 +1,6 @@
 # AI Timeline Automation System
 
-[![Weekly AI Timeline Update](https://github.com/jayvicsanantonio/ai-timeline-automation/actions/workflows/weekly-update.yml/badge.svg)](https://github.com/jayvicsanantonio/ai-timeline-automation/actions/workflows/weekly-update.yml)
+[![Daily AI Timeline Update](https://github.com/jayvicsanantonio/ai-timeline-automation/actions/workflows/daily-update.yml/badge.svg)](https://github.com/jayvicsanantonio/ai-timeline-automation/actions/workflows/daily-update.yml)
 [![CI](https://github.com/jayvicsanantonio/ai-timeline-automation/actions/workflows/ci.yml/badge.svg)](https://github.com/jayvicsanantonio/ai-timeline-automation/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -26,7 +26,7 @@
 
 The AI Timeline Automation System automatically:
 
-1. **Collects** AI-related news and research from multiple sources (HackerNews, ArXiv, RSS feeds)
+1. **Collects** AI-related news and research from multiple sources (ArXiv, DeepMind Blog, OpenAI Blog, Hugging Face Blog, and more RSS/API feeds)
 2. **Deduplicates** similar content to avoid redundancy
 3. **Analyzes** content using AI to determine significance and impact
 4. **Curates** the most important developments based on configurable thresholds
@@ -37,9 +37,9 @@ The AI Timeline Automation System automatically:
 
 ### 🔄 **Multi-Source Data Collection**
 
-- **HackerNews**: Top AI stories with score filtering
-- **ArXiv**: Latest AI/ML research papers (cs.AI, cs.LG categories)
-- **RSS Feeds**: Configurable tech blog feeds
+- **ArXiv**: Latest AI/ML research papers (cs.AI feed)
+- **DeepMind/OpenAI/Hugging Face Blogs**: Official announcements and research posts
+- **Extensible RSS/API connectors**: Enable or add new feeds in `config/sources.yaml`
 - **Extensible**: Easy to add new data sources
 
 ### 🧠 **AI-Powered Analysis**
