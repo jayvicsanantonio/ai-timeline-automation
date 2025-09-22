@@ -13,6 +13,10 @@ jobs:
   test:
     name: Test & Lint
     runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: dummy-openai-key
+      GIT_TOKEN: dummy-git-token
+      TIMELINE_REPO: owner/repo
     
     steps:
       - name: 📥 Checkout code
@@ -209,6 +213,10 @@ jobs:
     strategy:
       matrix:
         node-version: ['18', '20', '21']
+    env:
+      OPENAI_API_KEY: dummy-openai-key
+      GIT_TOKEN: dummy-git-token
+      TIMELINE_REPO: owner/repo
     
     steps:
       - name: 📥 Checkout code

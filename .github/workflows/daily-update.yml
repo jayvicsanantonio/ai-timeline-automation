@@ -179,6 +179,10 @@ jobs:
     name: Run Tests (manual only)
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch'
+    env:
+      OPENAI_API_KEY: dummy-openai-key
+      GIT_TOKEN: dummy-git-token
+      TIMELINE_REPO: owner/repo
 
     steps:
       - name: 📥 Checkout
