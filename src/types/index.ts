@@ -4,41 +4,41 @@
 
 // Event types
 export {
-  // Types and interfaces
-  RawEvent,
   AnalyzedEvent,
-  TimelineEntry,
-  EventCategory,
-  SignificanceScores,
-  // Schemas
-  RawEventSchema,
   AnalyzedEventSchema,
-  TimelineEntrySchema,
-  SignificanceScoresSchema,
+  EventCategory,
+  generateEventId,
+  isAnalyzedEvent,
   // Type guards
   isRawEvent,
-  isAnalyzedEvent,
   isTimelineEntry,
+  // Types and interfaces
+  RawEvent,
+  // Schemas
+  RawEventSchema,
+  SignificanceScores,
+  SignificanceScoresSchema,
+  TimelineEntry,
+  TimelineEntrySchema,
   // Utilities
-  toTimelineEntry,
-  generateEventId,
+  toTimelineEntry
 } from './events';
 
 // Source types
 export {
-  // Types and interfaces
-  NewsSource,
-  NewsSourceType,
-  NewsSourceConfig,
-  NewsSourceCollection,
-  FetchOptions,
-  RateLimitConfig,
-  // Enums
-  SourceReliability,
-  NewsSourceName,
-  // Schemas
-  NewsSourceConfigSchema,
   // Constants
   DEFAULT_RATE_LIMIT,
   DEFAULT_SOURCE_CONFIGS,
+  FetchOptions,
+  // Types and interfaces
+  NewsSource,
+  NewsSourceCollection,
+  NewsSourceConfig,
+  // Schemas
+  NewsSourceConfigSchema,
+  NewsSourceName,
+  NewsSourceType,
+  RateLimitConfig,
+  // Enums
+  SourceReliability
 } from './sources';

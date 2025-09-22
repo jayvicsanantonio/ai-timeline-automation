@@ -1,0 +1,32 @@
+dedupe:
+  embed_similarity_min: 0.88
+  minhash_jaccard_max: 0.12
+  url_canonicalize: true
+  embedding_model: text-embedding-latest
+  shingle_size: 3
+scoring:
+  weights:
+    technical: 0.5
+    commercial: 0.3
+    social: 0.2
+  min_composite: 0.62
+category_minimums:
+  breakthrough: 0.7
+  development: 0.6
+  research: 0.58
+  adoption: 0.55
+limits:
+  max_items_per_run: 40
+  max_items_per_source: 20
+timeouts:
+  connector_ms: 15000
+  llm_ms: 20000
+retries:
+  attempts: 3
+  base_ms: 300
+  max_ms: 4000
+outputs:
+  report_dir: reports
+  timeline_path: data/timeline-events.json
+errors:
+  tracker: noop

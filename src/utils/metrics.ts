@@ -2,7 +2,7 @@
  * Metrics collection for monitoring and observability
  */
 
-import { Logger, getLogger } from './logger';
+import { getLogger, type Logger } from './logger';
 
 export interface EventMetrics {
   source: string;
@@ -147,11 +147,7 @@ export class MetricsCollector {
   /**
    * Track API call
    */
-  trackApiCall(
-    service: string,
-    duration: number,
-    success: boolean = true
-  ): void {
+  trackApiCall(service: string, duration: number, success: boolean = true): void {
     const existing = this.apiMetrics.get(service) || {
       service,
       calls: 0,
@@ -192,13 +188,8 @@ export class MetricsCollector {
   /**
    * Track event selection
    */
-  trackSelection(
-    analyzed: number,
-    selected: number,
-    scores: number[],
-    threshold: number
-  ): void {
-    const validScores = scores.filter(s => s > 0);
+  trackSelection(analyzed: number, selected: number, scores: number[], threshold: number): void {
+    const validScores = scores.filter((s) => s > 0);
     const sumScores = validScores.reduce((a, b) => a + b, 0);
 
     const avg = validScores.length > 0 ? sumScores / validScores.length : 0;
@@ -232,7 +223,7 @@ export class MetricsCollector {
    */
   getTotalEventsCollected(): number {
     let total = 0;
-    this.eventMetrics.forEach(metrics => {
+    this.eventMetrics.forEach((metrics) => {
       total += metrics.collected;
     });
     return total;
@@ -243,7 +234,7 @@ export class MetricsCollector {
    */
   getTotalEventsFiltered(): number {
     let total = 0;
-    this.eventMetrics.forEach(metrics => {
+    this.eventMetrics.forEach((metrics) => {
       total += metrics.filtered;
     });
     return total;
@@ -288,7 +279,7 @@ export class MetricsCollector {
     });
 
     // Log source metrics
-    summary.sources.forEach(source => {
+    summary.sources.forEach((source) => {
       this.logger.info(`Source: ${source.source}`, {
         collected: source.collected,
         filtered: source.filtered,
@@ -298,7 +289,7 @@ export class MetricsCollector {
     });
 
     // Log API metrics
-    summary.apiCalls.forEach(api => {
+    summary.apiCalls.forEach((api) => {
       this.logger.info(`API: ${api.service}`, {
         calls: api.calls,
         failures: api.failures,
@@ -319,7 +310,7 @@ export class MetricsCollector {
     // Log errors if any
     if (summary.errors.length > 0) {
       this.logger.warn(`Execution completed with ${summary.errors.length} errors`);
-      summary.errors.forEach(err => {
+      summary.errors.forEach((err) => {
         this.logger.error(`Error in ${err.source}: ${err.error}`);
       });
     } else {
@@ -338,7 +329,7 @@ export class MetricsCollector {
    * Save metrics to file
    */
   async saveToFile(filepath: string): Promise<void> {
-    const fs = await import('fs').then(m => m.promises);
+    const fs = await import('node:fs').then((m) => m.promises);
     const summary = this.getSummary();
     await fs.writeFile(filepath, JSON.stringify(summary, null, 2));
     this.logger.info(`Metrics saved to ${filepath}`);
@@ -360,11 +351,7 @@ export function trackEventCollection(
   getMetricsCollector().trackEventCollection(source, collected, filtered, duration, error);
 }
 
-export function trackApiCall(
-  service: string,
-  duration: number,
-  success: boolean = true
-): void {
+export function trackApiCall(service: string, duration: number, success: boolean = true): void {
   getMetricsCollector().trackApiCall(service, duration, success);
 }
 

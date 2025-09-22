@@ -1,0 +1,15 @@
+{
+  "count": 3,
+  "next": null,
+  "previous": "https://paperswithcode.com/api/latest?page=1",
+  "results": [
+    {
+      "id": "agent-benchmark",
+      "title": "Benchmarking Foundation Agents",
+      "url_abs": "https://paperswithcode.com/paper/agent-benchmark",
+      "created_at": "2025-09-17T00:00:00Z",
+      "paper_abstract": "Benchmarks for evaluating foundation agents.",
+      "author_names": ["Eve Adams"]
+    }
+  ]
+}

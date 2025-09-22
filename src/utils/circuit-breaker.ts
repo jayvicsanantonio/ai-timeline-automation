@@ -59,7 +59,7 @@ export class CircuitBreaker {
       if (!this.canAttempt()) {
         throw new Error(
           `Circuit breaker is OPEN for ${this.config.serviceName}. ` +
-          `Next attempt at ${this.nextAttempt?.toISOString()}`
+            `Next attempt at ${this.nextAttempt?.toISOString()}`
         );
       }
       this.transitionToHalfOpen();
@@ -89,14 +89,14 @@ export class CircuitBreaker {
    */
   private onSuccess(): void {
     this.failures = 0;
-    
+
     if (this.state === CircuitState.HALF_OPEN) {
       this.successes++;
       console.log(
         `[CircuitBreaker] ${this.config.serviceName} success in HALF_OPEN state ` +
-        `(${this.successes}/${this.config.successThreshold})`
+          `(${this.successes}/${this.config.successThreshold})`
       );
-      
+
       if (this.successes >= this.config.successThreshold) {
         this.transitionToClosed();
       }
@@ -109,23 +109,22 @@ export class CircuitBreaker {
   private onFailure(): void {
     const now = new Date();
     this.lastFailureTime = now;
-    
+
     // Clean old failure timestamps outside the window
     this.failureTimestamps = this.failureTimestamps.filter(
-      timestamp => now.getTime() - timestamp.getTime() < this.config.windowSize
+      (timestamp) => now.getTime() - timestamp.getTime() < this.config.windowSize
     );
-    
+
     // Add new failure
     this.failureTimestamps.push(now);
     this.failures = this.failureTimestamps.length;
-    
+
     console.error(
       `[CircuitBreaker] ${this.config.serviceName} failure ` +
-      `(${this.failures}/${this.config.failureThreshold})`
+        `(${this.failures}/${this.config.failureThreshold})`
     );
 
-    if (this.state === CircuitState.HALF_OPEN || 
-        this.failures >= this.config.failureThreshold) {
+    if (this.state === CircuitState.HALF_OPEN || this.failures >= this.config.failureThreshold) {
       this.transitionToOpen();
     }
   }
@@ -158,10 +157,10 @@ export class CircuitBreaker {
     this.state = CircuitState.OPEN;
     this.successes = 0;
     this.nextAttempt = new Date(Date.now() + this.config.timeout);
-    
+
     console.log(
       `[CircuitBreaker] ${this.config.serviceName} will retry at ` +
-      `${this.nextAttempt.toISOString()}`
+        `${this.nextAttempt.toISOString()}`
     );
   }
 
@@ -228,27 +227,32 @@ export class CircuitBreakerFactory {
    * Get or create a circuit breaker for a service
    */
   static getBreaker(serviceName: string, config?: Partial<CircuitBreakerConfig>): CircuitBreaker {
-    if (!this.breakers.has(serviceName)) {
-      this.breakers.set(serviceName, new CircuitBreaker({
-        ...config,
-        serviceName
-      }));
+    if (!CircuitBreakerFactory.breakers.has(serviceName)) {
+      CircuitBreakerFactory.breakers.set(
+        serviceName,
+        new CircuitBreaker({
+          ...config,
+          serviceName
+        })
+      );
     }
-    return this.breakers.get(serviceName)!;
+    return CircuitBreakerFactory.breakers.get(serviceName)!;
   }
 
   /**
    * Reset all circuit breakers
    */
   static resetAll(): void {
-    this.breakers.forEach(breaker => breaker.reset());
+    for (const breaker of CircuitBreakerFactory.breakers.values()) {
+      breaker.reset();
+    }
   }
 
   /**
    * Clear all circuit breakers
    */
   static clear(): void {
-    this.breakers.clear();
+    CircuitBreakerFactory.breakers.clear();
   }
 
   /**
@@ -256,7 +260,7 @@ export class CircuitBreakerFactory {
    */
   static getAllStates(): Map<string, CircuitBreakerState> {
     const states = new Map<string, CircuitBreakerState>();
-    this.breakers.forEach((breaker, name) => {
+    CircuitBreakerFactory.breakers.forEach((breaker, name) => {
       states.set(name, breaker.getState());
     });
     return states;

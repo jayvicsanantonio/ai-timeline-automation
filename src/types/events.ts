@@ -24,7 +24,7 @@ export interface RawEvent {
   /** Full text content or summary */
   content: string;
   /** Additional source-specific metadata */
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -36,7 +36,7 @@ export const RawEventSchema = z.object({
   source: z.string().min(1),
   url: z.string().url(),
   content: z.string().min(1),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.any()).optional()
 });
 
 // ============================================================================
@@ -85,7 +85,7 @@ export interface AnalyzedEvent {
   /** Detailed significance breakdown */
   significance: SignificanceScores;
   /** Additional metadata from analysis */
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -95,7 +95,7 @@ export const SignificanceScoresSchema = z.object({
   technologicalBreakthrough: z.number().min(0).max(10),
   industryImpact: z.number().min(0).max(10),
   adoptionScale: z.number().min(0).max(10),
-  novelty: z.number().min(0).max(10),
+  novelty: z.number().min(0).max(10)
 });
 
 /**
@@ -111,7 +111,7 @@ export const AnalyzedEventSchema = z.object({
   url: z.string().url().optional(),
   impactScore: z.number().min(0).max(10),
   significance: SignificanceScoresSchema,
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.any()).optional()
 });
 
 // ============================================================================
@@ -149,7 +149,7 @@ export const TimelineEntrySchema = z.object({
   description: z.string().min(1).max(1000),
   category: z.enum(['research', 'product', 'regulation', 'industry']),
   sources: z.array(z.string().url()),
-  impact_score: z.number().min(0).max(10),
+  impact_score: z.number().min(0).max(10)
 });
 
 // ============================================================================
@@ -192,7 +192,7 @@ export function toTimelineEntry(event: AnalyzedEvent): TimelineEntry {
     description: event.description,
     category: event.category,
     sources: event.sources,
-    impact_score: event.impactScore,
+    impact_score: event.impactScore
   };
 }
 

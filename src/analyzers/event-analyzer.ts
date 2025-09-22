@@ -1,31 +1,20 @@
 /**
- * Event Analyzer using Vercel AI SDK
- * Analyzes raw events to determine significance and generate structured timeline entries
+ * Event Analyzer powered by the configurable LLM provider abstraction.
+ * Produces structured assessments for raw events that feed the scoring pipeline.
  */
 
-import { generateObject, LanguageModel } from 'ai';
-import { openai } from '@ai-sdk/openai';
 import { z } from 'zod';
-import {
-  RawEvent,
-  AnalyzedEvent,
-  EventCategory,
-  SignificanceScores,
-} from '../types';
 import { loadConfig } from '../config';
+import type { LLMFactoryOptions, LLMMessage, LLMProvider } from '../llm';
+import { createLLMProvider } from '../llm';
+import type { AnalyzedEvent, EventCategory, RawEvent, SignificanceScores } from '../types';
 
 // Schema for structured output from AI
 const AIAnalysisSchema = z.object({
-  title: z
-    .string()
-    .describe(
-      'Concise, informative title for the event (max 200 chars)'
-    ),
+  title: z.string().describe('Concise, informative title for the event (max 200 chars)'),
   description: z
     .string()
-    .describe(
-      'Clear description of the event and its significance (max 1000 chars)'
-    ),
+    .describe('Clear description of the event and its significance (max 1000 chars)'),
   category: z
     .enum(['research', 'product', 'regulation', 'industry'])
     .describe('Primary category of the event'),
@@ -40,28 +29,39 @@ const AIAnalysisSchema = z.object({
       .min(0)
       .max(10)
       .describe('Potential impact on the AI industry (0-10)'),
-    adoptionScale: z
-      .number()
-      .min(0)
-      .max(10)
-      .describe('Expected scale of adoption or usage (0-10)'),
+    adoptionScale: z.number().min(0).max(10).describe('Expected scale of adoption or usage (0-10)'),
     novelty: z
       .number()
       .min(0)
       .max(10)
-      .describe(
-        'How novel or unprecedented this development is (0-10)'
-      ),
+      .describe('How novel or unprecedented this development is (0-10)')
   }),
-  keyInsights: z
-    .array(z.string())
-    .describe('Key takeaways or implications'),
-  relatedTopics: z
-    .array(z.string())
-    .describe('Related AI topics or technologies'),
+  keyInsights: z.array(z.string()).describe('Key takeaways or implications'),
+  relatedTopics: z.array(z.string()).describe('Related AI topics or technologies')
 });
 
 type AIAnalysisResult = z.infer<typeof AIAnalysisSchema>;
+
+const SYSTEM_PROMPT = `You are an AI analyst supporting an automated AI timeline. Reply only with valid JSON that strictly matches this structure:
+{
+  "title": "Concise, informative title (max 200 characters)",
+  "description": "Clear description of the event and its significance (max 1000 characters)",
+  "category": "research | product | regulation | industry",
+  "significance": {
+    "technologicalBreakthrough": number between 0 and 10,
+    "industryImpact": number between 0 and 10,
+    "adoptionScale": number between 0 and 10,
+    "novelty": number between 0 and 10
+  },
+  "keyInsights": ["short bullet insight", ...],
+  "relatedTopics": ["related concept", ...]
+}
+
+Rules:
+- Select the single best category from the allowed set.
+- Provide 2-4 key insights and 2-4 related topics.
+- Keep language crisp and objective.
+- Do not add commentary before or after the JSON.`;
 
 export interface EventAnalyzerConfig {
   model?: string;
@@ -71,30 +71,44 @@ export interface EventAnalyzerConfig {
   maxEventsToSelect?: number;
 }
 
+export interface EventAnalyzerDependencies {
+  llmProvider?: LLMProvider;
+}
+
 export class EventAnalyzer {
-  private readonly model: string;
-  private readonly temperature: number;
+  private readonly requestTemperature: number;
   private readonly maxRetries: number;
   private readonly significanceThreshold: number;
   private readonly maxEventsToSelect: number;
-  private readonly aiProvider: (modelId: string) => LanguageModel;
+  private readonly llmProviderPromise: Promise<LLMProvider>;
 
-  constructor(config: EventAnalyzerConfig = {}) {
+  constructor(config: EventAnalyzerConfig = {}, dependencies: EventAnalyzerDependencies = {}) {
     const appConfig = loadConfig();
 
-    // Use configured model or override from config
-    this.model = config.model || appConfig.aiModel;
-    this.temperature = config.temperature ?? 0.3;
+    this.requestTemperature = config.temperature ?? 0.2;
     this.maxRetries = config.maxRetries || 3;
-    this.significanceThreshold =
-      config.significanceThreshold || appConfig.significanceThreshold;
-    this.maxEventsToSelect =
-      config.maxEventsToSelect || appConfig.maxEventsPerWeek;
+    this.significanceThreshold = config.significanceThreshold || appConfig.significanceThreshold;
+    this.maxEventsToSelect = config.maxEventsToSelect || appConfig.maxEventsPerWeek;
 
-    // Initialize OpenAI provider with API key
-    // Note: Type casting needed due to version mismatch between ai SDK types
-    this.aiProvider = openai as any;
-    console.log(`Using OpenAI with model: ${this.model}`);
+    if (dependencies.llmProvider) {
+      this.llmProviderPromise = Promise.resolve(dependencies.llmProvider);
+    } else {
+      const overrides: NonNullable<LLMFactoryOptions['overrides']> = {};
+
+      if (typeof config.model === 'string') {
+        overrides.model = config.model;
+      }
+      if (typeof config.temperature === 'number') {
+        overrides.temperature = config.temperature;
+      }
+
+      const providerOptions: LLMFactoryOptions = {};
+      if (Object.keys(overrides).length > 0) {
+        providerOptions.overrides = overrides;
+      }
+
+      this.llmProviderPromise = createLLMProvider(providerOptions);
+    }
   }
 
   /**
@@ -105,10 +119,11 @@ export class EventAnalyzer {
 
     const BATCH_SIZE = 5;
     const analyzedEvents: AnalyzedEvent[] = [];
+    const provider = await this.llmProviderPromise;
 
     for (let i = 0; i < events.length; i += BATCH_SIZE) {
       const batch = events.slice(i, i + BATCH_SIZE);
-      const promises = batch.map((event) => this.analyzeEvent(event));
+      const promises = batch.map((event) => this.analyzeEvent(event, provider));
       const results = await Promise.allSettled(promises);
 
       const successfullyAnalyzed: AnalyzedEvent[] = [];
@@ -116,18 +131,13 @@ export class EventAnalyzer {
         if (result.status === 'fulfilled' && result.value) {
           successfullyAnalyzed.push(result.value);
         } else if (result.status === 'rejected') {
-          console.error(
-            'Event analysis failed with an unhandled rejection:',
-            result.reason
-          );
+          console.error('Event analysis failed with an unhandled rejection:', result.reason);
         }
       }
       analyzedEvents.push(...successfullyAnalyzed);
     }
 
-    console.log(
-      `Successfully analyzed ${analyzedEvents.length} events`
-    );
+    console.log(`Successfully analyzed ${analyzedEvents.length} events`);
     return analyzedEvents;
   }
 
@@ -135,23 +145,17 @@ export class EventAnalyzer {
    * Analyze a single event using AI
    */
   private async analyzeEvent(
-    event: RawEvent
+    event: RawEvent,
+    provider: LLMProvider
   ): Promise<AnalyzedEvent | null> {
     let retries = 0;
 
     while (retries < this.maxRetries) {
       try {
-        const analysis = await this.performAIAnalysis(event);
-
-        if (!analysis) {
-          console.warn(`Failed to analyze event: ${event.title}`);
-          return null;
-        }
+        const analysis = await this.performLLMAnalysis(event, provider);
 
         // Calculate overall impact score
-        const impactScore = this.calculateImpactScore(
-          analysis.significance
-        );
+        const impactScore = this.calculateImpactScore(analysis.significance);
 
         // Generate a unique ID for the event
         const id = this.generateEventId(event.date, event.title);
@@ -171,16 +175,14 @@ export class EventAnalyzer {
             keyInsights: analysis.keyInsights,
             relatedTopics: analysis.relatedTopics,
             originalTitle: event.title,
-            analysisModel: this.model,
-            analysisDate: new Date().toISOString(),
-          },
+            analysisProvider: provider.id,
+            analysisModel: provider.model,
+            analysisDate: new Date().toISOString()
+          }
         };
       } catch (error) {
         retries++;
-        console.error(
-          `Error analyzing event (attempt ${retries}/${this.maxRetries}):`,
-          error
-        );
+        console.error(`Error analyzing event (attempt ${retries}/${this.maxRetries}):`, error);
 
         if (retries >= this.maxRetries) {
           console.error(
@@ -190,208 +192,69 @@ export class EventAnalyzer {
         }
 
         // Exponential backoff
-        await new Promise((resolve) =>
-          setTimeout(resolve, Math.pow(2, retries) * 1000)
-        );
+        await new Promise((resolve) => setTimeout(resolve, 2 ** retries * 1000));
       }
     }
 
     return null;
   }
 
-  /**
-   * Perform AI analysis using Vercel AI SDK
-   */
-  private async performAIAnalysis(
-    event: RawEvent
-  ): Promise<AIAnalysisResult | null> {
-    try {
-      // First try structured output
-      return await this.performStructuredAnalysis(event);
-    } catch (error) {
-      console.warn(
-        `Structured analysis failed for ${event.title}, falling back to text-based analysis:`,
-        error instanceof Error ? error.message : String(error)
-      );
-      // Fall back to text-based analysis
-      return await this.performTextBasedAnalysis(event);
-    }
-  }
-
-  /**
-   * Perform structured AI analysis (for models that support it)
-   */
-  private async performStructuredAnalysis(
-    event: RawEvent
-  ): Promise<AIAnalysisResult | null> {
-    const prompt = this.buildAnalysisPrompt(event);
-
-    const result = await generateObject({
-      model: this.aiProvider(this.model),
-      schema: AIAnalysisSchema,
-      prompt,
-      temperature: this.temperature,
-      maxRetries: 1,
+  private async performLLMAnalysis(
+    event: RawEvent,
+    provider: LLMProvider
+  ): Promise<AIAnalysisResult> {
+    const messages = this.buildCompletionMessages(event);
+    const response = await provider.complete({
+      messages,
+      temperature: this.requestTemperature
     });
 
-    return result.object;
-  }
-
-  /**
-   * Perform text-based AI analysis (fallback for models without structured output)
-   */
-  private async performTextBasedAnalysis(
-    event: RawEvent
-  ): Promise<AIAnalysisResult | null> {
-    const { generateText } = await import('ai');
-    const prompt = this.buildTextAnalysisPrompt(event);
+    const payload = this.extractJsonPayload(response.text);
 
     try {
-      const result = await generateText({
-        model: this.aiProvider(this.model),
-        prompt,
-        temperature: this.temperature,
-        maxRetries: 1,
+      const parsed = JSON.parse(payload);
+      return AIAnalysisSchema.parse(parsed);
+    } catch (error) {
+      console.error('Failed to parse LLM analysis output', {
+        payload,
+        error: error instanceof Error ? error.message : error
       });
-
-      return this.parseTextAnalysis(result.text, event);
-    } catch (error) {
-      console.error('Text-based analysis failed:', error);
-      return null;
+      throw error;
     }
   }
 
-  /**
-   * Build text-based analysis prompt for models without structured output
-   */
-  private buildTextAnalysisPrompt(event: RawEvent): string {
-    const date = event.date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-
-    return `You are an AI news analyst specializing in artificial intelligence developments. Analyze the following news event and provide a structured assessment.
-
-Event Information:
-- Title: ${event.title}
-- Date: ${date}
-- Source: ${event.source || 'Unknown'}
-- URL: ${event.url || 'N/A'}
-
-Content:
-${event.content}
-
-${
-  event.metadata?.abstract
-    ? `Abstract: ${event.metadata.abstract}`
-    : ''
-}
-${
-  event.metadata?.authors
-    ? `Authors: ${event.metadata.authors.join(', ')}`
-    : ''
-}
-
-Please analyze this event and provide your response in the following JSON format (respond ONLY with valid JSON):
-
-{
-  "title": "A clear, concise title (max 200 characters)",
-  "description": "A comprehensive description explaining its significance (max 1000 characters)",
-  "category": "research|product|regulation|industry",
-  "significance": {
-    "technologicalBreakthrough": <0-10>,
-    "industryImpact": <0-10>,
-    "adoptionScale": <0-10>,
-    "novelty": <0-10>
-  },
-  "keyInsights": ["insight 1", "insight 2"],
-  "relatedTopics": ["topic 1", "topic 2"]
-}
-
-Score meanings:
-- Technological breakthrough: How much this advances the state of the art (0-10)
-- Industry impact: Potential effect on the AI industry (0-10)
-- Adoption scale: Expected scale of adoption or usage (0-10)
-- Novelty: How unprecedented this development is (0-10)
-
-Focus on factual analysis and avoid speculation. Consider the event's importance in the context of AI development in ${new Date().getFullYear()}.`;
+  private buildCompletionMessages(event: RawEvent): LLMMessage[] {
+    return [
+      {
+        role: 'system',
+        content: SYSTEM_PROMPT
+      },
+      {
+        role: 'user',
+        content: this.buildAnalysisPrompt(event)
+      }
+    ];
   }
 
-  /**
-   * Parse text-based AI analysis response
-   */
-  private parseTextAnalysis(
-    text: string,
-    _event: RawEvent
-  ): AIAnalysisResult | null {
-    try {
-      // Extract JSON from response (in case there's extra text)
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        console.error('No JSON found in AI response:', text);
-        return null;
+  private extractJsonPayload(text: string): string {
+    const trimmed = text.trim();
+    const fencedMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+    const candidate = fencedMatch ? fencedMatch[1].trim() : trimmed;
+
+    if (candidate.startsWith('{')) {
+      const lastBrace = candidate.lastIndexOf('}');
+      if (lastBrace !== -1) {
+        return candidate.slice(0, lastBrace + 1);
       }
-
-      const parsed = JSON.parse(jsonMatch[0]);
-
-      // Validate the structure
-      if (
-        !parsed.title ||
-        !parsed.description ||
-        !parsed.category ||
-        !parsed.significance
-      ) {
-        console.error('Invalid AI response structure:', parsed);
-        return null;
-      }
-
-      // Ensure arrays exist
-      parsed.keyInsights = Array.isArray(parsed.keyInsights)
-        ? parsed.keyInsights
-        : [];
-      parsed.relatedTopics = Array.isArray(parsed.relatedTopics)
-        ? parsed.relatedTopics
-        : [];
-
-      // Validate category
-      if (
-        !['research', 'product', 'regulation', 'industry'].includes(
-          parsed.category
-        )
-      ) {
-        console.warn(
-          `Invalid category '${parsed.category}', defaulting to 'research'`
-        );
-        parsed.category = 'research';
-      }
-
-      // Validate significance scores
-      const sig = parsed.significance;
-      sig.technologicalBreakthrough = Math.max(
-        0,
-        Math.min(10, sig.technologicalBreakthrough || 0)
-      );
-      sig.industryImpact = Math.max(
-        0,
-        Math.min(10, sig.industryImpact || 0)
-      );
-      sig.adoptionScale = Math.max(
-        0,
-        Math.min(10, sig.adoptionScale || 0)
-      );
-      sig.novelty = Math.max(0, Math.min(10, sig.novelty || 0));
-
-      return parsed;
-    } catch (error) {
-      console.error(
-        'Failed to parse AI response:',
-        error,
-        'Response:',
-        text
-      );
-      return null;
     }
+
+    const firstBrace = candidate.indexOf('{');
+    const lastBrace = candidate.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      return candidate.slice(firstBrace, lastBrace + 1);
+    }
+
+    throw new Error('No JSON object found in LLM response');
   }
 
   /**
@@ -401,63 +264,50 @@ Focus on factual analysis and avoid speculation. Consider the event's importance
     const date = event.date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
-      day: 'numeric',
+      day: 'numeric'
     });
+    const lines: string[] = [
+      'Event briefing for analysis:',
+      `Title: ${event.title}`,
+      `Published on: ${date}`,
+      `Source: ${event.source || 'Unknown'}`,
+      `URL: ${event.url || 'N/A'}`,
+      '',
+      'Full content:',
+      event.content
+    ];
 
-    return `You are an AI news analyst specializing in artificial intelligence developments. Analyze the following news event and provide a structured assessment.
+    if (event.metadata?.abstract) {
+      lines.push('', `Abstract: ${event.metadata.abstract}`);
+    }
 
-Event Information:
-- Title: ${event.title}
-- Date: ${date}
-- Source: ${event.source || 'Unknown'}
-- URL: ${event.url || 'N/A'}
+    if (Array.isArray(event.metadata?.authors)) {
+      lines.push('', `Authors: ${event.metadata?.authors.join(', ')}`);
+    }
 
-Content:
-${event.content}
+    if (event.metadata?.additionalContext) {
+      lines.push('', `Additional context: ${event.metadata.additionalContext}`);
+    }
 
-${
-  event.metadata?.abstract
-    ? `Abstract: ${event.metadata.abstract}`
-    : ''
-}
-${
-  event.metadata?.authors
-    ? `Authors: ${event.metadata.authors.join(', ')}`
-    : ''
-}
+    lines.push('', 'Return the JSON object now. Do not include explanations or commentary.');
 
-Please analyze this event and provide:
-1. A clear, concise title (max 200 characters)
-2. A comprehensive description explaining its significance (max 1000 characters)
-3. The most appropriate category (research, product, regulation, or industry)
-4. Significance scores (0-10) for:
-   - Technological breakthrough: How much this advances the state of the art
-   - Industry impact: Potential effect on the AI industry
-   - Adoption scale: Expected scale of adoption or usage
-   - Novelty: How unprecedented this development is
-5. Key insights or implications
-6. Related AI topics or technologies
-
-Focus on factual analysis and avoid speculation. Consider the event's importance in the context of AI development in ${new Date().getFullYear()}.`;
+    return lines.join('\n');
   }
 
   /**
    * Calculate overall impact score from significance dimensions
    */
-  private calculateImpactScore(
-    significance: SignificanceScores
-  ): number {
+  private calculateImpactScore(significance: SignificanceScores): number {
     // Weighted average of significance dimensions
     const weights = {
       technologicalBreakthrough: 0.35,
       industryImpact: 0.3,
       adoptionScale: 0.2,
-      novelty: 0.15,
+      novelty: 0.15
     };
 
     const score =
-      significance.technologicalBreakthrough *
-        weights.technologicalBreakthrough +
+      significance.technologicalBreakthrough * weights.technologicalBreakthrough +
       significance.industryImpact * weights.industryImpact +
       significance.adoptionScale * weights.adoptionScale +
       significance.novelty * weights.novelty;
@@ -483,9 +333,7 @@ Focus on factual analysis and avoid speculation. Consider the event's importance
   /**
    * Rank and select the most significant events
    */
-  async selectTopEvents(
-    events: AnalyzedEvent[]
-  ): Promise<AnalyzedEvent[]> {
+  async selectTopEvents(events: AnalyzedEvent[]): Promise<AnalyzedEvent[]> {
     console.log(
       `Selecting top ${this.maxEventsToSelect} events from ${events.length} analyzed events`
     );
@@ -508,10 +356,7 @@ Focus on factual analysis and avoid speculation. Consider the event's importance
     });
 
     // Take top N events
-    const selectedEvents = sortedEvents.slice(
-      0,
-      this.maxEventsToSelect
-    );
+    const selectedEvents = sortedEvents.slice(0, this.maxEventsToSelect);
 
     console.log(`Selected ${selectedEvents.length} top events`);
     selectedEvents.forEach((event) => {
@@ -539,7 +384,7 @@ Focus on factual analysis and avoid speculation. Consider the event's importance
     events.forEach((event, index) => {
       const date = new Date(event.date).toLocaleDateString('en-US', {
         month: 'short',
-        day: 'numeric',
+        day: 'numeric'
       });
 
       lines.push(`### ${index + 1}. ${event.title}`);

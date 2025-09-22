@@ -3,17 +3,17 @@
  */
 
 import {
-  RawEvent,
-  AnalyzedEvent,
-  TimelineEntry,
-  RawEventSchema,
+  type AnalyzedEvent,
   AnalyzedEventSchema,
-  TimelineEntrySchema,
-  isRawEvent,
-  isAnalyzedEvent,
-  isTimelineEntry,
-  toTimelineEntry,
   generateEventId,
+  isAnalyzedEvent,
+  isRawEvent,
+  isTimelineEntry,
+  type RawEvent,
+  RawEventSchema,
+  type TimelineEntry,
+  TimelineEntrySchema,
+  toTimelineEntry
 } from '../events';
 
 describe('Event Types', () => {
@@ -24,7 +24,7 @@ describe('Event Types', () => {
       source: 'OpenAI Blog',
       url: 'https://openai.com/blog/gpt-5',
       content: 'OpenAI announced the release of GPT-5...',
-      metadata: { author: 'Sam Altman' },
+      metadata: { author: 'Sam Altman' }
     };
 
     it('should validate a valid RawEvent', () => {
@@ -57,8 +57,8 @@ describe('Event Types', () => {
         technologicalBreakthrough: 9,
         industryImpact: 10,
         adoptionScale: 9,
-        novelty: 9,
-      },
+        novelty: 9
+      }
     };
 
     it('should validate a valid AnalyzedEvent', () => {
@@ -81,7 +81,7 @@ describe('Event Types', () => {
     it('should reject scores outside 0-10 range', () => {
       const invalidEvent = {
         ...validAnalyzedEvent,
-        impactScore: 11,
+        impactScore: 11
       };
       expect(() => AnalyzedEventSchema.parse(invalidEvent)).toThrow();
       expect(isAnalyzedEvent(invalidEvent)).toBe(false);
@@ -96,7 +96,7 @@ describe('Event Types', () => {
       description: 'OpenAI announced the release of GPT-5...',
       category: 'product',
       sources: ['https://openai.com/blog/gpt-5'],
-      impact_score: 9.5,
+      impact_score: 9.5
     };
 
     it('should validate a valid TimelineEntry', () => {
@@ -126,12 +126,12 @@ describe('Event Types', () => {
             technologicalBreakthrough: 8,
             industryImpact: 9,
             adoptionScale: 8,
-            novelty: 9,
-          },
+            novelty: 9
+          }
         };
 
         const timelineEntry = toTimelineEntry(analyzedEvent);
-        
+
         expect(timelineEntry).toEqual({
           id: analyzedEvent.id,
           date: analyzedEvent.date,
@@ -139,9 +139,9 @@ describe('Event Types', () => {
           description: analyzedEvent.description,
           category: analyzedEvent.category,
           sources: analyzedEvent.sources,
-          impact_score: analyzedEvent.impactScore,
+          impact_score: analyzedEvent.impactScore
         });
-        
+
         expect(isTimelineEntry(timelineEntry)).toBe(true);
       });
     });
@@ -150,28 +150,28 @@ describe('Event Types', () => {
       it('should generate valid event ID from date and title', () => {
         const date = new Date('2024-01-15');
         const title = 'OpenAI Releases GPT-5: A Major Breakthrough!';
-        
+
         const id = generateEventId(date, title);
-        
+
         expect(id).toBe('2024-01-15-openai-releases-gpt-5-a-major-breakthrough');
         expect(id).toMatch(/^\d{4}-\d{2}-\d{2}-[a-z0-9-]+$/);
       });
 
       it('should handle special characters in title', () => {
         const date = new Date('2024-01-15');
-        const title = 'AI & ML: What\'s Next? (2024 Edition)';
-        
+        const title = "AI & ML: What's Next? (2024 Edition)";
+
         const id = generateEventId(date, title);
-        
+
         expect(id).toBe('2024-01-15-ai-ml-what-s-next-2024-edition');
       });
 
       it('should truncate long titles', () => {
         const date = new Date('2024-01-15');
         const title = 'A'.repeat(100); // Very long title
-        
+
         const id = generateEventId(date, title);
-        
+
         expect(id.length).toBeLessThanOrEqual(61); // 10 for date + 1 for dash + 50 for slug
       });
     });
