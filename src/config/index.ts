@@ -27,7 +27,6 @@ const EnvSchema = z.object({
     .transform(Number)
     .pipe(z.number().min(0).max(10))
     .default('7.0'),
-  NEWS_SOURCES: z.string().default('hackernews,arxiv,rss'),
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug']).default('info'),
   DRY_RUN: z
     .enum(['true', 'false'])
@@ -61,7 +60,6 @@ export interface AppConfig {
   // Workflow settings
   maxEventsPerWeek: number;
   significanceThreshold: number;
-  newsSources: string[];
   dryRun: boolean;
 
   // API Keys
@@ -139,9 +137,6 @@ class Configuration {
         },
         maxEventsPerWeek: this.env.MAX_EVENTS_PER_WEEK,
         significanceThreshold: this.env.SIGNIFICANCE_THRESHOLD,
-        newsSources: this.env.NEWS_SOURCES.split(',')
-          .map((s) => s.trim())
-          .filter(Boolean),
         dryRun: this.env.DRY_RUN,
         apiKeys: {
           hackernews: this.env.HACKERNEWS_API_KEY,

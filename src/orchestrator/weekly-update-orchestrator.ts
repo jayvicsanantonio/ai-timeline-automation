@@ -21,7 +21,6 @@ export interface OrchestratorConfig {
   timelineRepo: string; // format: owner/repo
   maxEventsPerWeek?: number; // default 3
   significanceThreshold?: number; // default 7.0
-  newsSources?: string[]; // names of enabled sources
   githubToken?: string;
   dryRun?: boolean;
 }

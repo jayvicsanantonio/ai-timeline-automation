@@ -116,7 +116,7 @@ describe('GitHubManager', () => {
 
       expect(result).toEqual({
         number: 123,
-        url: 'https://github.com/test-owner/test-repo/pull/123',
+        html_url: 'https://github.com/test-owner/test-repo/pull/123',
         branch: expect.stringMatching(/^auto-update\/week-\d{4}-\d{2}$/),
         created: true
       });
@@ -146,7 +146,7 @@ describe('GitHubManager', () => {
 
       expect(result).toEqual({
         number: 100,
-        url: 'https://github.com/test-owner/test-repo/pull/100',
+        html_url: 'https://github.com/test-owner/test-repo/pull/100',
         branch: 'auto-update/week-2024-01',
         created: false
       });

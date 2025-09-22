@@ -85,7 +85,6 @@ jobs:
           echo "  - Max Events: $MAX_EVENTS_PER_WEEK"
           echo "  - Significance Threshold: $SIGNIFICANCE_THRESHOLD"
           echo "  - Dry Run: $DRY_RUN"
-          echo "  - News Sources: $NEWS_SOURCES"
           echo "  - Log Level: $LOG_LEVEL"
           echo ""
           

@@ -50,7 +50,6 @@ function initializeConfiguration() {
           timelineRepo: appConfig.timelineRepo.full,
           maxEventsPerWeek: appConfig.maxEventsPerWeek,
           significanceThreshold: appConfig.significanceThreshold,
-          newsSources: appConfig.newsSources,
           dryRun: appConfig.dryRun,
           logLevel: appConfig.logLevel
         },

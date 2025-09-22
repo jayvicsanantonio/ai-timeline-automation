@@ -13,7 +13,7 @@
      - Optional: `HACKERNEWS_API_KEY`, `ARXIV_API_KEY`
    - Repository variables:
      - `TIMELINE_REPO` (e.g., `owner/repo`)
-     - Optional: `DRY_RUN`, `NEWS_SOURCES`, `LOG_LEVEL`, `SUMMARY_ISSUE_NUMBER`
+     - Optional: `DRY_RUN`, `LOG_LEVEL`, `SUMMARY_ISSUE_NUMBER`
 
 ## 2. Configuration Files
 - `config/sources.yaml` &mdash; enable/disable connectors, update URLs, tweak rate limits & `window_days`.
@@ -64,10 +64,12 @@ npm run update
 - `npm test -- connectors` &mdash; connector contract tests (uses fixtures under `tests/__fixtures__/`).
 
 ## 7. Connector Cheat Sheet
-- **OpenAIBlog** (RSS) &mdash; metadata: `source_name`.
-- **DeepMindBlog** (HTML/JSON-LD) &mdash; handles structured data + article fallback; add fixtures if DeepMind changes layout.
-- **PapersWithCode** (API) &mdash; respects pagination and window limits; normalises authors/summary.
-- **Anthropic** &mdash; currently disabled (their RSS returns 404). Re-enable when a valid feed exists.
+- **ArXiv (cs.AI RSS)** &mdash; scientific papers feed, enabled by default.
+- **DeepMind Blog** (HTML/JSON-LD) &mdash; handles structured data + article fallback; add fixtures if DeepMind changes layout.
+- **OpenAI Blog** (RSS) &mdash; includes metadata (`source_name: OpenAI Blog`), rate-limited to 20 QPM.
+- **Hugging Face Blog** (RSS) &mdash; enabled feed for community/feature updates.
+- **Anthropic** (RSS) &mdash; currently disabled because their RSS endpoint returns 404. Re-enable once a valid feed exists.
+- **Papers with Code** (API) &mdash; connector ready but disabled by default; flip `enabled: true` to ingest the latest API items.
 
 ## 8. LLM Controls
 - Default provider: GPT-5 Low (`openai_gpt5_low`).
