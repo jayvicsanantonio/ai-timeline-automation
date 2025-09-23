@@ -4,7 +4,7 @@
 
 import { Octokit } from '@octokit/rest';
 import { z } from 'zod';
-import { type TimelineEntry, TimelineEntrySchema } from '../types';
+import { generateEventId, type TimelineEntry, TimelineEntrySchema } from '../types';
 
 /**
  * Configuration for TimelineReader
@@ -34,16 +34,39 @@ export interface TimelineData {
   content: string;
 }
 
-/**
- * Schema for timeline JSON file
- */
-const TimelineFileSchema = z.object({
-  lastUpdated: z.string(),
-  totalEntries: z.number(),
-  entries: z.array(TimelineEntrySchema)
-});
+const LegacyTimelineEntrySchema = z
+  .object({
+    title: z.string().min(1),
+    description: z.string().optional(),
+    category: z.string().optional(),
+    date: z.string().optional(),
+    year: z.number().int().optional(),
+    month: z.union([z.string(), z.number()]).optional(),
+    link: z.string().optional(),
+    url: z.string().optional(),
+    sources: z.union([z.array(z.string()), z.string()]).optional()
+  })
+  .passthrough();
 
-type TimelineFile = z.infer<typeof TimelineFileSchema>;
+type LegacyTimelineEntry = z.infer<typeof LegacyTimelineEntrySchema>;
+type TimelineCategory = TimelineEntry['category'];
+
+const DEFAULT_CATEGORY: TimelineCategory = 'Research Breakthroughs';
+
+const MONTHS: Record<string, number> = {
+  january: 0,
+  february: 1,
+  march: 2,
+  april: 3,
+  may: 4,
+  june: 5,
+  july: 6,
+  august: 7,
+  september: 8,
+  october: 9,
+  november: 10,
+  december: 11
+};
 
 /**
  * Reads timeline events from a GitHub repository
@@ -95,14 +118,14 @@ export class TimelineReader {
       // Decode content from base64
       const content = Buffer.from(response.data.content, 'base64').toString('utf-8');
 
-      // Parse and validate JSON
+      // Parse and normalize JSON
       const parsedData = JSON.parse(content);
-      const validatedData = this.validateTimelineData(parsedData);
+      const events = this.parseTimelineData(parsedData);
 
-      console.log(`Successfully fetched ${validatedData.entries.length} existing events`);
+      console.log(`Successfully fetched ${events.length} existing events`);
 
       return {
-        events: validatedData.entries as TimelineEntry[],
+        events,
         sha: response.data.sha,
         content
       };
@@ -131,14 +154,163 @@ export class TimelineReader {
   }
 
   /**
-   * Validate the timeline data structure
+   * Parse timeline data in array format
    */
-  private validateTimelineData(data: unknown): TimelineFile {
+  private parseTimelineData(data: unknown): TimelineEntry[] {
+    const legacyArray = z.array(LegacyTimelineEntrySchema).safeParse(data);
+    if (!legacyArray.success) {
+      console.error('Timeline validation error:', legacyArray.error);
+      throw new Error(
+        'Invalid timeline data structure. Expected an array of timeline entries like the provided sample.'
+      );
+    }
+
+    const entries = legacyArray.data
+      .map((entry, index) => this.normalizeLegacyEntry(entry, index))
+      .filter((entry): entry is TimelineEntry => entry !== null);
+
+    return entries;
+  }
+
+  private normalizeLegacyEntry(entry: LegacyTimelineEntry, index: number): TimelineEntry | null {
+    const title = entry.title?.trim();
+    if (!title) {
+      console.warn(`Timeline entry at index ${index} is missing a title. Skipping.`);
+      return null;
+    }
+
+    const eventDate = this.resolveLegacyDate(entry);
+    if (!eventDate) {
+      console.warn(`Timeline entry "${title}" is missing a valid date. Skipping.`);
+      return null;
+    }
+
+    const sources = this.normalizeLegacySources(entry);
+    if (sources.length === 0) {
+      console.warn(`Timeline entry "${title}" does not contain any valid source URLs. Skipping.`);
+      return null;
+    }
+
+    const candidate: TimelineEntry = {
+      id: generateEventId(eventDate, title),
+      date: eventDate.toISOString(),
+      title,
+      description: (entry.description ?? title).trim(),
+      category: this.mapLegacyCategory(entry.category),
+      sources,
+      impact_score: 5
+    };
+
     try {
-      return TimelineFileSchema.parse(data);
+      return TimelineEntrySchema.parse(candidate);
     } catch (error) {
-      console.error('Timeline validation error:', error);
-      throw new Error('Invalid timeline data structure');
+      console.warn(
+        `Timeline entry "${title}" failed validation after normalization. Skipping entry.`,
+        error
+      );
+      return null;
+    }
+  }
+
+  private resolveLegacyDate(entry: LegacyTimelineEntry): Date | null {
+    if (entry.date) {
+      const parsed = new Date(entry.date);
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed;
+      }
+    }
+
+    if (entry.year) {
+      const year = entry.year;
+      let monthIndex = 0;
+
+      if (typeof entry.month === 'number' && Number.isFinite(entry.month)) {
+        monthIndex = Math.min(11, Math.max(0, entry.month - 1));
+      } else if (typeof entry.month === 'string') {
+        const normalized = entry.month.trim().toLowerCase();
+        if (normalized in MONTHS) {
+          monthIndex = MONTHS[normalized];
+        }
+      }
+
+      return new Date(Date.UTC(year, monthIndex, 1));
+    }
+
+    return null;
+  }
+
+  private mapLegacyCategory(category?: string): TimelineCategory {
+    if (!category) {
+      return DEFAULT_CATEGORY;
+    }
+
+    const normalized = category.trim().toLowerCase();
+
+    switch (normalized) {
+      case 'models & architectures':
+      case 'models':
+      case 'architectures':
+      case 'ai models':
+        return 'Models & Architectures';
+      case 'research breakthroughs':
+      case 'research':
+      case 'fundamental research':
+      case 'academic research':
+      case 'breakthroughs':
+        return 'Research Breakthroughs';
+      case 'public releases':
+      case 'product':
+      case 'products':
+      case 'product releases':
+      case 'commercial releases':
+      case 'industry adoption':
+        return 'Public Releases';
+      case 'ethics & policy':
+      case 'policy':
+      case 'regulation':
+      case 'policy & regulation':
+      case 'regulation & policy':
+      case 'ethics':
+        return 'Ethics & Policy';
+      case 'hardware advances':
+      case 'hardware':
+      case 'infrastructure':
+      case 'compute':
+        return 'Hardware Advances';
+      default:
+        return DEFAULT_CATEGORY;
+    }
+  }
+
+  private normalizeLegacySources(entry: LegacyTimelineEntry): string[] {
+    const sources = new Set<string>();
+
+    const addSource = (value?: string) => {
+      if (!value) return;
+      const trimmed = value.trim();
+      if (!trimmed) return;
+      if (!this.isValidUrl(trimmed)) return;
+      sources.add(trimmed);
+    };
+
+    if (Array.isArray(entry.sources)) {
+      entry.sources.forEach(addSource);
+    } else if (typeof entry.sources === 'string') {
+      addSource(entry.sources);
+    }
+
+    addSource(entry.link);
+    addSource(entry.url);
+
+    return Array.from(sources);
+  }
+
+  private isValidUrl(value: string): boolean {
+    try {
+      const url = new URL(value);
+      return Boolean(url.protocol && url.hostname);
+    } catch {
+      return false;
     }
   }
 
