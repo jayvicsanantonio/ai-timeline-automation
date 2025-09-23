@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 env:
-  NODE_VERSION: '18'
+  NODE_VERSION: '22'
 
 jobs:
   test:
@@ -212,7 +212,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: ['18', '20', '21']
+        node-version: ['22']
     env:
       OPENAI_API_KEY: dummy-openai-key
       GIT_TOKEN: dummy-git-token

@@ -4,25 +4,10 @@
  * Main entry point for the AI Timeline Update GitHub Action
  */
 
-import { Blob as NodeBlob, File as NodeFile } from 'node:buffer';
 import * as fs from 'node:fs';
 import { config, loadConfig, validateConfig } from './config';
 import { type OrchestratorResult, WeeklyUpdateOrchestrator } from './orchestrator';
 import { ConfigurationError } from './utils/errors';
-
-// Polyfill Web File/Blob for Node 18 so undici-based clients can run without ReferenceError.
-const globalWithFile = globalThis as typeof globalThis & {
-  File?: typeof NodeFile;
-  Blob?: typeof NodeBlob;
-};
-
-if (typeof globalWithFile.File === 'undefined') {
-  globalWithFile.File = NodeFile;
-}
-
-if (typeof globalWithFile.Blob === 'undefined') {
-  globalWithFile.Blob = NodeBlob;
-}
 
 /**
  * Write execution summary to file for GitHub Actions
