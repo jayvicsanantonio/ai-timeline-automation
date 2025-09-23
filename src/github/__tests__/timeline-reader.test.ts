@@ -4,6 +4,7 @@
 
 import { Octokit } from '@octokit/rest';
 import type { TimelineEntry } from '../../types';
+import { generateEventId } from '../../types';
 import { TimelineReader } from '../timeline-reader';
 
 // Mock Octokit
@@ -41,37 +42,43 @@ describe('TimelineReader', () => {
 
   describe('fetchTimeline', () => {
     it('should fetch and parse timeline successfully', async () => {
-      const mockEvents: TimelineEntry[] = [
+      const legacyEntries = [
         {
-          id: '2024-01-15-test-event',
-          date: '2024-01-15T00:00:00Z',
+          year: 2024,
+          month: 'January',
           title: 'Test Event',
           description: 'Test description',
-          category: 'product',
-          sources: ['https://example.com'],
-          impact_score: 8.5
+          category: 'Product',
+          link: 'https://example.com/article',
+          sources: ['https://example.com/source']
         }
       ];
-
-      const mockContent = {
-        lastUpdated: '2024-01-15T00:00:00Z',
-        totalEntries: 1,
-        entries: mockEvents
-      };
 
       mockOctokit.repos.getContent.mockResolvedValueOnce({
         data: {
           type: 'file',
-          content: Buffer.from(JSON.stringify(mockContent, null, 2)).toString('base64'),
+          content: Buffer.from(JSON.stringify(legacyEntries)).toString('base64'),
           sha: 'mock-sha-123'
         }
       });
 
       const result = await reader.fetchTimeline();
+      const expectedDate = new Date(Date.UTC(2024, 0, 1));
 
-      expect(result.events).toEqual(mockEvents);
+      expect(result.events).toHaveLength(1);
+      expect(result.events[0]).toMatchObject({
+        id: generateEventId(expectedDate, 'Test Event'),
+        date: expectedDate.toISOString(),
+        title: 'Test Event',
+        description: 'Test description',
+        category: 'Public Releases',
+        impact_score: 5
+      });
+      expect(result.events[0].sources).toEqual(
+        expect.arrayContaining(['https://example.com/source', 'https://example.com/article'])
+      );
       expect(result.sha).toBe('mock-sha-123');
-      expect(JSON.parse(result.content)).toEqual(mockContent);
+      expect(JSON.parse(result.content)).toEqual(legacyEntries);
       expect(mockOctokit.repos.getContent).toHaveBeenCalledWith({
         owner: 'test-owner',
         repo: 'test-repo',
@@ -94,37 +101,79 @@ describe('TimelineReader', () => {
       });
     });
 
-    it('should handle new structure format', async () => {
-      const mockEvents: TimelineEntry[] = [
-        {
-          id: '2024-01-15-test-event',
-          date: '2024-01-15T00:00:00Z',
-          title: 'Test Event',
-          description: 'Test description',
-          category: 'research',
-          sources: ['https://example.com'],
-          impact_score: 7.0
-        }
-      ];
-
-      const mockContent = {
+    it('should reject structured timeline objects', async () => {
+      const structured = {
         lastUpdated: '2024-01-15T00:00:00Z',
         totalEntries: 1,
-        entries: mockEvents
+        entries: [] as TimelineEntry[]
       };
 
       mockOctokit.repos.getContent.mockResolvedValueOnce({
         data: {
           type: 'file',
-          content: Buffer.from(JSON.stringify(mockContent)).toString('base64'),
+          content: Buffer.from(JSON.stringify(structured)).toString('base64'),
           sha: 'mock-sha-456'
+        }
+      });
+
+      await expect(reader.fetchTimeline()).rejects.toThrow('Invalid timeline data structure');
+    });
+
+    it('should normalize array-based timeline entries', async () => {
+      const legacyEntries = [
+        {
+          year: 1943,
+          month: 'November',
+          title: 'McCulloch-Pitts Neuron',
+          description:
+            "Warren McCulloch and Walter Pitts publish 'A Logical Calculus of the Ideas Immanent in Nervous Activity,' proposing the first mathematical model of a neural network.",
+          category: 'Research Breakthroughs',
+          link: 'https://en.wikipedia.org/wiki/A_Logical_Calculus_of_the_Ideas_Immanent_in_Nervous_Activity'
+        },
+        {
+          year: 1950,
+          month: 'October',
+          title: 'The Turing Test',
+          description:
+            "Alan Turing's paper 'Computing Machinery and Intelligence' proposes the 'Imitation Game' to assess a machine's ability to exhibit intelligent behavior indistinguishable from that of a human.",
+          category: 'Research Breakthroughs',
+          link: 'https://archive.org/details/MIND--COMPUTING-MACHINERY-AND-INTELLIGENCE'
+        }
+      ];
+
+      mockOctokit.repos.getContent.mockResolvedValueOnce({
+        data: {
+          type: 'file',
+          content: Buffer.from(JSON.stringify(legacyEntries)).toString('base64'),
+          sha: 'legacy-sha-001'
         }
       });
 
       const result = await reader.fetchTimeline();
 
-      expect(result.events).toEqual(mockEvents);
-      expect(result.sha).toBe('mock-sha-456');
+      expect(result.sha).toBe('legacy-sha-001');
+      expect(result.events).toHaveLength(2);
+
+      const firstDate = new Date(Date.UTC(1943, 10, 1));
+      const secondDate = new Date(Date.UTC(1950, 9, 1));
+
+      expect(result.events[0]).toMatchObject({
+        id: generateEventId(firstDate, 'McCulloch-Pitts Neuron'),
+        date: firstDate.toISOString(),
+        category: 'Research Breakthroughs',
+        sources: [
+          'https://en.wikipedia.org/wiki/A_Logical_Calculus_of_the_Ideas_Immanent_in_Nervous_Activity'
+        ],
+        impact_score: 5
+      });
+
+      expect(result.events[1]).toMatchObject({
+        id: generateEventId(secondDate, 'The Turing Test'),
+        date: secondDate.toISOString(),
+        category: 'Research Breakthroughs',
+        sources: ['https://archive.org/details/MIND--COMPUTING-MACHINERY-AND-INTELLIGENCE'],
+        impact_score: 5
+      });
     });
 
     it('should throw error for directory response', async () => {
@@ -152,7 +201,7 @@ describe('TimelineReader', () => {
           date: '2024-01-15T00:00:00Z',
           title: 'Event 1',
           description: 'Description',
-          category: 'product',
+          category: 'Public Releases',
           sources: [],
           impact_score: 8.0
         }
@@ -175,7 +224,7 @@ describe('TimelineReader', () => {
           date: '2024-01-15T00:00:00Z',
           title: 'Event 1',
           description: 'Description',
-          category: 'product',
+          category: 'Public Releases',
           sources: [],
           impact_score: 8.0
         },
@@ -184,7 +233,7 @@ describe('TimelineReader', () => {
           date: '2024-01-16T00:00:00Z',
           title: 'Event 2',
           description: 'Description',
-          category: 'research',
+          category: 'Research Breakthroughs',
           sources: [],
           impact_score: 7.5
         }
@@ -196,7 +245,7 @@ describe('TimelineReader', () => {
           date: '2024-01-15T00:00:00Z',
           title: 'Event 1',
           description: 'Description',
-          category: 'product',
+          category: 'Public Releases',
           sources: [],
           impact_score: 8.0
         }
@@ -216,7 +265,7 @@ describe('TimelineReader', () => {
           date: '2024-01-10T00:00:00Z',
           title: 'Event 1',
           description: 'Description',
-          category: 'product',
+          category: 'Public Releases',
           sources: [],
           impact_score: 8.0
         },
@@ -225,7 +274,7 @@ describe('TimelineReader', () => {
           date: '2024-01-15T00:00:00Z',
           title: 'Event 2',
           description: 'Description',
-          category: 'research',
+          category: 'Research Breakthroughs',
           sources: [],
           impact_score: 7.5
         },
@@ -234,7 +283,7 @@ describe('TimelineReader', () => {
           date: '2024-01-20T00:00:00Z',
           title: 'Event 3',
           description: 'Description',
-          category: 'industry',
+          category: 'Hardware Advances',
           sources: [],
           impact_score: 9.0
         }
@@ -257,7 +306,7 @@ describe('TimelineReader', () => {
           date: '2024-01-10T00:00:00Z',
           title: 'Event 1',
           description: 'Description',
-          category: 'product',
+          category: 'Public Releases',
           sources: [],
           impact_score: 8.0
         },
@@ -266,7 +315,7 @@ describe('TimelineReader', () => {
           date: '2024-01-20T00:00:00Z',
           title: 'Event 2',
           description: 'Description',
-          category: 'research',
+          category: 'Research Breakthroughs',
           sources: [],
           impact_score: 7.5
         },
@@ -275,7 +324,7 @@ describe('TimelineReader', () => {
           date: '2024-01-15T00:00:00Z',
           title: 'Event 3',
           description: 'Description',
-          category: 'industry',
+          category: 'Hardware Advances',
           sources: [],
           impact_score: 9.0
         }
@@ -297,7 +346,7 @@ describe('TimelineReader', () => {
           date: '2024-01-10T00:00:00Z',
           title: 'Event 1',
           description: 'Description',
-          category: 'product',
+          category: 'Public Releases',
           sources: [],
           impact_score: 8.0
         },
@@ -306,7 +355,7 @@ describe('TimelineReader', () => {
           date: '2024-01-15T00:00:00Z',
           title: 'Event 2',
           description: 'Description',
-          category: 'research',
+          category: 'Research Breakthroughs',
           sources: [],
           impact_score: 7.5
         },
@@ -315,13 +364,13 @@ describe('TimelineReader', () => {
           date: '2024-01-20T00:00:00Z',
           title: 'Event 3',
           description: 'Description',
-          category: 'product',
+          category: 'Public Releases',
           sources: [],
           impact_score: 9.0
         }
       ];
 
-      const productEvents = reader.getEventsByCategory(events, 'product');
+      const productEvents = reader.getEventsByCategory(events, 'Public Releases');
 
       expect(productEvents).toHaveLength(2);
       expect(productEvents[0].id).toBe('event-1');
@@ -337,7 +386,7 @@ describe('TimelineReader', () => {
           date: '2024-01-10T00:00:00Z',
           title: 'Event 1',
           description: 'Description',
-          category: 'product',
+          category: 'Public Releases',
           sources: [],
           impact_score: 8.0
         },
@@ -346,7 +395,7 @@ describe('TimelineReader', () => {
           date: '2024-01-15T00:00:00Z',
           title: 'Event 2',
           description: 'Description',
-          category: 'research',
+          category: 'Research Breakthroughs',
           sources: [],
           impact_score: 7.0
         },
@@ -355,7 +404,7 @@ describe('TimelineReader', () => {
           date: '2024-01-20T00:00:00Z',
           title: 'Event 3',
           description: 'Description',
-          category: 'product',
+          category: 'Public Releases',
           sources: [],
           impact_score: 9.0
         }
@@ -365,8 +414,8 @@ describe('TimelineReader', () => {
 
       expect(stats.totalEvents).toBe(3);
       expect(stats.byCategory).toEqual({
-        product: 2,
-        research: 1
+        'Public Releases': 2,
+        'Research Breakthroughs': 1
       });
       expect(stats.averageImpactScore).toBe(8.0);
       expect(stats.dateRange.earliest).toBe('2024-01-10T00:00:00Z');
@@ -392,7 +441,7 @@ describe('TimelineReader', () => {
           date: '2024-01-15T00:00:00Z',
           title: 'New Event',
           description: 'Description',
-          category: 'product',
+          category: 'Public Releases',
           sources: [],
           impact_score: 8.0
         }
@@ -404,7 +453,7 @@ describe('TimelineReader', () => {
           date: '2024-01-10T00:00:00Z',
           title: 'Existing Event',
           description: 'Description',
-          category: 'product',
+          category: 'Public Releases',
           sources: [],
           impact_score: 7.0
         }
@@ -423,7 +472,7 @@ describe('TimelineReader', () => {
           date: '2024-01-15T00:00:00Z',
           title: 'OpenAI Releases GPT-5',
           description: 'Description',
-          category: 'product',
+          category: 'Public Releases',
           sources: [],
           impact_score: 9.0
         }
@@ -435,7 +484,7 @@ describe('TimelineReader', () => {
           date: '2024-01-15T00:00:00Z',
           title: 'OpenAI Releases GPT-5',
           description: 'Description',
-          category: 'product',
+          category: 'Public Releases',
           sources: [],
           impact_score: 9.0
         }
@@ -458,7 +507,7 @@ describe('TimelineReader', () => {
           date: futureDate.toISOString(),
           title: 'Future Event',
           description: 'Description',
-          category: 'product',
+          category: 'Public Releases',
           sources: [],
           impact_score: 8.0
         }

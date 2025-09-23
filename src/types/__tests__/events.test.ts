@@ -94,7 +94,7 @@ describe('Event Types', () => {
       date: '2024-01-15T00:00:00Z',
       title: 'OpenAI Releases GPT-5',
       description: 'OpenAI announced the release of GPT-5...',
-      category: 'product',
+      category: 'Public Releases',
       sources: ['https://openai.com/blog/gpt-5'],
       impact_score: 9.5
     };
@@ -137,7 +137,7 @@ describe('Event Types', () => {
           date: analyzedEvent.date,
           title: analyzedEvent.title,
           description: analyzedEvent.description,
-          category: analyzedEvent.category,
+          category: 'Research Breakthroughs',
           sources: analyzedEvent.sources,
           impact_score: analyzedEvent.impactScore
         });

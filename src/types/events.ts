@@ -46,7 +46,12 @@ export const RawEventSchema = z.object({
 /**
  * Event categories for classification
  */
-export type EventCategory = 'research' | 'product' | 'regulation' | 'industry';
+export type EventCategory =
+  | 'Models & Architectures'
+  | 'Research Breakthroughs'
+  | 'Public Releases'
+  | 'Ethics & Policy'
+  | 'Hardware Advances';
 
 /**
  * Significance scores for multi-dimensional evaluation
@@ -132,7 +137,12 @@ export interface TimelineEntry {
   /** Event description */
   description: string;
   /** Event category */
-  category: string;
+  category:
+    | 'Models & Architectures'
+    | 'Research Breakthroughs'
+    | 'Public Releases'
+    | 'Ethics & Policy'
+    | 'Hardware Advances';
   /** List of source URLs */
   sources: string[];
   /** Overall impact score (0-10) */
@@ -147,7 +157,13 @@ export const TimelineEntrySchema = z.object({
   date: z.string().datetime(),
   title: z.string().min(1).max(200),
   description: z.string().min(1).max(1000),
-  category: z.enum(['research', 'product', 'regulation', 'industry']),
+  category: z.enum([
+    'Models & Architectures',
+    'Research Breakthroughs',
+    'Public Releases',
+    'Ethics & Policy',
+    'Hardware Advances'
+  ]),
   sources: z.array(z.string().url()),
   impact_score: z.number().min(0).max(10)
 });
@@ -185,15 +201,37 @@ export function isTimelineEntry(obj: unknown): obj is TimelineEntry {
  * Convert AnalyzedEvent to TimelineEntry format
  */
 export function toTimelineEntry(event: AnalyzedEvent): TimelineEntry {
+  const category = mapAnalyzedCategory(event.category);
   return {
     id: event.id,
     date: event.date,
     title: event.title,
     description: event.description,
-    category: event.category,
+    category,
     sources: event.sources,
     impact_score: event.impactScore
   };
+}
+
+const ANALYZED_TO_TIMELINE_CATEGORY: Record<string, EventCategory> = {
+  research: 'Research Breakthroughs',
+  'research breakthroughs': 'Research Breakthroughs',
+  'models & architectures': 'Models & Architectures',
+  product: 'Public Releases',
+  products: 'Public Releases',
+  'public releases': 'Public Releases',
+  industry: 'Public Releases',
+  adoption: 'Public Releases',
+  regulation: 'Ethics & Policy',
+  policy: 'Ethics & Policy',
+  'ethics & policy': 'Ethics & Policy',
+  hardware: 'Hardware Advances',
+  'hardware advances': 'Hardware Advances'
+};
+
+function mapAnalyzedCategory(category: string): EventCategory {
+  const normalized = category.trim().toLowerCase();
+  return ANALYZED_TO_TIMELINE_CATEGORY[normalized] ?? 'Research Breakthroughs';
 }
 
 /**
