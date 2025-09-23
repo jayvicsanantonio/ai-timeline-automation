@@ -1,6 +1,5 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import nock from 'nock';
 import { PapersWithCodeConnector } from '../paperswithcode';
 import type { SourceConnectorInit, SourceFetchOptions } from '../types';
 
@@ -29,27 +28,41 @@ function buildConnector(): PapersWithCodeConnector {
 }
 
 describe('PapersWithCodeConnector', () => {
+  let fetchSpy: jest.SpiedFunction<typeof fetch>;
+
   beforeAll(() => {
-    nock.disableNetConnect();
+    fetchSpy = jest.spyOn(global, 'fetch');
   });
 
   afterEach(() => {
-    nock.cleanAll();
+    fetchSpy.mockReset();
   });
 
   afterAll(() => {
-    nock.enableNetConnect();
+    fetchSpy.mockRestore();
   });
 
   it('collects paginated API results within the requested window', async () => {
     const page1 = readFixture('paperswithcode-page-1.json');
     const page2 = readFixture('paperswithcode-page-2.json');
 
-    nock(BASE_URL).get(API_PATH).reply(200, page1, { 'Content-Type': 'application/json' });
-    nock(BASE_URL)
-      .get('/api/latest')
-      .query({ page: '2' })
-      .reply(200, page2, { 'Content-Type': 'application/json' });
+    fetchSpy
+      .mockResolvedValueOnce(
+        new Response(page1, {
+          status: 200,
+          headers: {
+            'content-type': 'application/json'
+          }
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(page2, {
+          status: 200,
+          headers: {
+            'content-type': 'application/json'
+          }
+        })
+      );
 
     const connector = buildConnector();
     const options: SourceFetchOptions = {
@@ -80,7 +93,14 @@ describe('PapersWithCodeConnector', () => {
   it('respects maxItems in fetch options', async () => {
     const page1 = readFixture('paperswithcode-page-1.json');
 
-    nock(BASE_URL).get(API_PATH).reply(200, page1, { 'Content-Type': 'application/json' });
+    fetchSpy.mockResolvedValueOnce(
+      new Response(page1, {
+        status: 200,
+        headers: {
+          'content-type': 'application/json'
+        }
+      })
+    );
 
     const connector = buildConnector();
     const options: SourceFetchOptions = {

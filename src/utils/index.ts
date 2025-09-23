@@ -21,6 +21,7 @@ export {
   RateLimitError,
   ValidationError
 } from './errors';
+export { fetchJson, fetchText, HttpRequestError, type HttpRequestOptions } from './http';
 export {
   createLogger,
   getLogger,
