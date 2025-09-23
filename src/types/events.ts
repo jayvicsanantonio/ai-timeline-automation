@@ -44,9 +44,14 @@ export const RawEventSchema = z.object({
 // ============================================================================
 
 /**
- * Event categories for classification
+ * Event categories for classification during analysis
  */
-export type EventCategory =
+export type EventCategory = 'research' | 'product' | 'regulation' | 'industry';
+
+/**
+ * Categories exposed in the published timeline
+ */
+export type TimelineCategory =
   | 'Models & Architectures'
   | 'Research Breakthroughs'
   | 'Public Releases'
@@ -137,12 +142,7 @@ export interface TimelineEntry {
   /** Event description */
   description: string;
   /** Event category */
-  category:
-    | 'Models & Architectures'
-    | 'Research Breakthroughs'
-    | 'Public Releases'
-    | 'Ethics & Policy'
-    | 'Hardware Advances';
+  category: TimelineCategory;
   /** List of source URLs */
   sources: string[];
   /** Overall impact score (0-10) */
@@ -213,7 +213,7 @@ export function toTimelineEntry(event: AnalyzedEvent): TimelineEntry {
   };
 }
 
-const ANALYZED_TO_TIMELINE_CATEGORY: Record<string, EventCategory> = {
+const ANALYZED_TO_TIMELINE_CATEGORY: Record<string, TimelineCategory> = {
   research: 'Research Breakthroughs',
   'research breakthroughs': 'Research Breakthroughs',
   'models & architectures': 'Models & Architectures',
@@ -229,7 +229,7 @@ const ANALYZED_TO_TIMELINE_CATEGORY: Record<string, EventCategory> = {
   'hardware advances': 'Hardware Advances'
 };
 
-function mapAnalyzedCategory(category: string): EventCategory {
+function mapAnalyzedCategory(category: string): TimelineCategory {
   const normalized = category.trim().toLowerCase();
   return ANALYZED_TO_TIMELINE_CATEGORY[normalized] ?? 'Research Breakthroughs';
 }

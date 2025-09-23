@@ -135,15 +135,7 @@ export class TimelineReader {
         return {
           events: [],
           sha: '',
-          content: JSON.stringify(
-            {
-              lastUpdated: new Date().toISOString(),
-              totalEntries: 0,
-              entries: []
-            },
-            null,
-            2
-          )
+          content: '[]'
         };
       }
 
