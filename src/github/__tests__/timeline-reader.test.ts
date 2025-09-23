@@ -94,11 +94,7 @@ describe('TimelineReader', () => {
 
       expect(result.events).toEqual([]);
       expect(result.sha).toBe('');
-      expect(JSON.parse(result.content)).toEqual({
-        lastUpdated: expect.any(String),
-        totalEntries: 0,
-        entries: []
-      });
+      expect(result.content).toBe('[]');
     });
 
     it('should reject structured timeline objects', async () => {

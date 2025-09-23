@@ -257,14 +257,7 @@ export class GitHubManager {
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
 
-    // Create updated content with the new structure
-    const updatedData = {
-      lastUpdated: new Date().toISOString(),
-      totalEntries: allEvents.length,
-      entries: allEvents
-    };
-
-    const updatedContent = JSON.stringify(updatedData, null, 2);
+    const updatedContent = JSON.stringify(allEvents, null, 2);
 
     // Update file on GitHub
     try {
