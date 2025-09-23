@@ -34,21 +34,18 @@ export interface TimelineData {
   content: string;
 }
 
-const LegacyTimelineEntrySchema = z
+const TimelineJsonEventSchema = z
   .object({
+    year: z.number().int(),
+    month: z.union([z.string(), z.number().int().min(1).max(12)]),
     title: z.string().min(1),
-    description: z.string().optional(),
-    category: z.string().optional(),
-    date: z.string().optional(),
-    year: z.number().int().optional(),
-    month: z.union([z.string(), z.number()]).optional(),
-    link: z.string().optional(),
-    url: z.string().optional(),
-    sources: z.union([z.array(z.string()), z.string()]).optional()
+    description: z.string().min(1),
+    category: z.string().min(1),
+    link: z.string().url()
   })
   .passthrough();
 
-type LegacyTimelineEntry = z.infer<typeof LegacyTimelineEntrySchema>;
+type TimelineJsonEvent = z.infer<typeof TimelineJsonEventSchema>;
 type TimelineCategory = TimelineEntry['category'];
 
 const DEFAULT_CATEGORY: TimelineCategory = 'Research Breakthroughs';
@@ -149,35 +146,35 @@ export class TimelineReader {
    * Parse timeline data in array format
    */
   private parseTimelineData(data: unknown): TimelineEntry[] {
-    const legacyArray = z.array(LegacyTimelineEntrySchema).safeParse(data);
-    if (!legacyArray.success) {
-      console.error('Timeline validation error:', legacyArray.error);
+    const timelineArray = z.array(TimelineJsonEventSchema).safeParse(data);
+    if (!timelineArray.success) {
+      console.error('Timeline validation error:', timelineArray.error);
       throw new Error(
         'Invalid timeline data structure. Expected an array of timeline entries like the provided sample.'
       );
     }
 
-    const entries = legacyArray.data
-      .map((entry, index) => this.normalizeLegacyEntry(entry, index))
+    const entries = timelineArray.data
+      .map((entry, index) => this.normalizeTimelineEvent(entry, index))
       .filter((entry): entry is TimelineEntry => entry !== null);
 
     return entries;
   }
 
-  private normalizeLegacyEntry(entry: LegacyTimelineEntry, index: number): TimelineEntry | null {
-    const title = entry.title?.trim();
+  private normalizeTimelineEvent(entry: TimelineJsonEvent, index: number): TimelineEntry | null {
+    const title = entry.title.trim();
     if (!title) {
       console.warn(`Timeline entry at index ${index} is missing a title. Skipping.`);
       return null;
     }
 
-    const eventDate = this.resolveLegacyDate(entry);
+    const eventDate = this.resolveTimelineDate(entry);
     if (!eventDate) {
       console.warn(`Timeline entry "${title}" is missing a valid date. Skipping.`);
       return null;
     }
 
-    const sources = this.normalizeLegacySources(entry);
+    const sources = this.normalizeSources(entry);
     if (sources.length === 0) {
       console.warn(`Timeline entry "${title}" does not contain any valid source URLs. Skipping.`);
       return null;
@@ -188,7 +185,7 @@ export class TimelineReader {
       date: eventDate.toISOString(),
       title,
       description: (entry.description ?? title).trim(),
-      category: this.mapLegacyCategory(entry.category),
+      category: this.mapCategory(entry.category),
       sources,
       impact_score: 5
     };
@@ -204,34 +201,26 @@ export class TimelineReader {
     }
   }
 
-  private resolveLegacyDate(entry: LegacyTimelineEntry): Date | null {
-    if (entry.date) {
-      const parsed = new Date(entry.date);
-      if (!Number.isNaN(parsed.getTime())) {
-        return parsed;
+  private resolveTimelineDate(entry: TimelineJsonEvent): Date | null {
+    const year = entry.year;
+    let monthIndex = 0;
+
+    if (typeof entry.month === 'number') {
+      monthIndex = Math.min(11, Math.max(0, entry.month - 1));
+    } else {
+      const normalized = entry.month.trim().toLowerCase();
+      if (normalized in MONTHS) {
+        monthIndex = MONTHS[normalized];
+      } else {
+        console.warn(`Unknown month "${entry.month}"; defaulting to January.`);
+        monthIndex = 0;
       }
     }
 
-    if (entry.year) {
-      const year = entry.year;
-      let monthIndex = 0;
-
-      if (typeof entry.month === 'number' && Number.isFinite(entry.month)) {
-        monthIndex = Math.min(11, Math.max(0, entry.month - 1));
-      } else if (typeof entry.month === 'string') {
-        const normalized = entry.month.trim().toLowerCase();
-        if (normalized in MONTHS) {
-          monthIndex = MONTHS[normalized];
-        }
-      }
-
-      return new Date(Date.UTC(year, monthIndex, 1));
-    }
-
-    return null;
+    return new Date(Date.UTC(year, monthIndex, 1));
   }
 
-  private mapLegacyCategory(category?: string): TimelineCategory {
+  private mapCategory(category?: string): TimelineCategory {
     if (!category) {
       return DEFAULT_CATEGORY;
     }
@@ -270,11 +259,12 @@ export class TimelineReader {
       case 'compute':
         return 'Hardware Advances';
       default:
+        console.warn(`Unknown category "${category}". Defaulting to ${DEFAULT_CATEGORY}.`);
         return DEFAULT_CATEGORY;
     }
   }
 
-  private normalizeLegacySources(entry: LegacyTimelineEntry): string[] {
+  private normalizeSources(entry: TimelineJsonEvent): string[] {
     const sources = new Set<string>();
 
     const addSource = (value?: string) => {
@@ -285,14 +275,14 @@ export class TimelineReader {
       sources.add(trimmed);
     };
 
-    if (Array.isArray(entry.sources)) {
-      entry.sources.forEach(addSource);
-    } else if (typeof entry.sources === 'string') {
-      addSource(entry.sources);
-    }
-
     addSource(entry.link);
-    addSource(entry.url);
+
+    // Allow optional extra links
+    if (Array.isArray((entry as any).sources)) {
+      (entry as any).sources.forEach((value: string) => {
+        addSource(value);
+      });
+    }
 
     return Array.from(sources);
   }
