@@ -279,7 +279,9 @@ export class TimelineReader {
 
     // Allow optional extra links
     if (Array.isArray((entry as any).sources)) {
-      (entry as any).sources.forEach((value: string) => addSource(value));
+      (entry as any).sources.forEach((value: string) => {
+        addSource(value);
+      });
     }
 
     return Array.from(sources);
