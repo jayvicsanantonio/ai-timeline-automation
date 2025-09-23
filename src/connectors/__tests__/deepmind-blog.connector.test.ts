@@ -1,6 +1,5 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import nock from 'nock';
 import { DeepMindBlogConnector } from '../deepmind-blog';
 import type { SourceConnectorInit, SourceFetchOptions } from '../types';
 
@@ -36,22 +35,30 @@ function buildConnector(): DeepMindBlogConnector {
 }
 
 describe('DeepMindBlogConnector', () => {
+  let fetchSpy: jest.SpiedFunction<typeof fetch>;
+
   beforeAll(() => {
-    nock.disableNetConnect();
+    fetchSpy = jest.spyOn(global, 'fetch');
   });
 
   afterEach(() => {
-    nock.cleanAll();
+    fetchSpy.mockReset();
   });
 
   afterAll(() => {
-    nock.enableNetConnect();
+    fetchSpy.mockRestore();
   });
 
   it('parses posts from JSON-LD payloads', async () => {
     const html = readFixture('deepmind-blog.jsonld.html');
-
-    nock(BASE_URL).get(BLOG_PATH).reply(200, html);
+    fetchSpy.mockResolvedValueOnce(
+      new Response(html, {
+        status: 200,
+        headers: {
+          'content-type': 'text/html'
+        }
+      })
+    );
 
     const connector = buildConnector();
     const items = await connector.fetch(buildOptions());
@@ -75,8 +82,14 @@ describe('DeepMindBlogConnector', () => {
 
   it('falls back to article markup when JSON-LD is missing', async () => {
     const html = readFixture('deepmind-blog.article.html');
-
-    nock(BASE_URL).get(BLOG_PATH).reply(200, html);
+    fetchSpy.mockResolvedValueOnce(
+      new Response(html, {
+        status: 200,
+        headers: {
+          'content-type': 'text/html'
+        }
+      })
+    );
 
     const connector = buildConnector();
     const items = await connector.fetch(buildOptions());

@@ -1,6 +1,6 @@
-import axios from 'axios';
 import { type CheerioAPI, load as loadHtml } from 'cheerio';
 import { NewsSourceError } from '../utils/errors';
+import { fetchText } from '../utils/http';
 import { AbstractSourceConnector } from './base';
 import type { RawItem, SourceConnectorInit, SourceFetchOptions } from './types';
 
@@ -43,15 +43,15 @@ export class DeepMindBlogConnector extends AbstractSourceConnector {
     const timeout = this.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
     try {
-      const response = await axios.get<string>(this.url, {
+      const payload = await fetchText(this.url, {
         timeout,
-        responseType: 'text',
+        signal: options.signal,
         headers: {
           'User-Agent': 'ai-timeline-bot/1.0 (+https://github.com/jayvicsanantonio/ai-timeline)'
         }
       });
 
-      const $ = loadHtml(response.data);
+      const $ = loadHtml(payload);
       const candidates = [...this.extractFromJsonLd($), ...this.extractFromArticles($)];
       const unique = this.deduplicateById(candidates);
       return this.filterWindow(unique, options);

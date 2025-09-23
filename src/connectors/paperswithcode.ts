@@ -1,5 +1,5 @@
-import axios, { type AxiosResponse } from 'axios';
 import { NewsSourceError } from '../utils/errors';
+import { fetchJson } from '../utils/http';
 import { AbstractSourceConnector } from './base';
 import type { RawItem, SourceConnectorInit, SourceFetchOptions } from './types';
 
@@ -48,12 +48,15 @@ export class PapersWithCodeConnector extends AbstractSourceConnector {
 
     try {
       while (nextUrl && items.length < maxItems) {
-        const response: AxiosResponse<PapersWithCodeResponse | PapersWithCodeEntry[]> =
-          await axios.get<PapersWithCodeResponse | PapersWithCodeEntry[]>(nextUrl, {
-            timeout
-          });
-
-        const payload: PapersWithCodeResponse | PapersWithCodeEntry[] = response.data;
+        const payload: PapersWithCodeResponse | PapersWithCodeEntry[] = await fetchJson<
+          PapersWithCodeResponse | PapersWithCodeEntry[]
+        >(nextUrl, {
+          timeout,
+          signal: options.signal,
+          headers: {
+            'User-Agent': 'ai-timeline-bot/1.0 (+https://github.com/jayvicsanantonio/ai-timeline)'
+          }
+        });
         const entries = this.resolveEntries(payload);
 
         for (const entry of entries) {

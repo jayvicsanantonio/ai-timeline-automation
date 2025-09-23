@@ -1,6 +1,6 @@
-import axios from 'axios';
 import Parser from 'rss-parser';
 import { NewsSourceError } from '../utils/errors';
+import { fetchText } from '../utils/http';
 import { AbstractSourceConnector } from './base';
 import type { RawItem, SourceFetchOptions } from './types';
 
@@ -35,15 +35,15 @@ export class RssSourceConnector extends AbstractSourceConnector {
     const timeout = this.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
     try {
-      const response = await axios.get<string>(this.url, {
+      const payload = await fetchText(this.url, {
         timeout,
-        responseType: 'text',
+        signal: options.signal,
         headers: {
           'User-Agent': 'ai-timeline-bot/1.0 (+https://github.com/jayvicsanantonio/ai-timeline)'
         }
       });
 
-      const feed = await this.parser.parseString(response.data);
+      const feed = await this.parser.parseString(payload);
       const items = (feed.items ?? [])
         .filter((item) => Boolean(item.link) && Boolean(item.title))
         .map((item) => this.mapItem(item))
