@@ -257,7 +257,8 @@ export class GitHubManager {
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
 
-    const updatedContent = JSON.stringify(allEvents, null, 2);
+    const rawEvents = allEvents.map((event) => this.toTimelineJson(event));
+    const updatedContent = JSON.stringify(rawEvents, null, 2);
 
     // Update file on GitHub
     try {
@@ -277,6 +278,29 @@ export class GitHubManager {
       console.error('Error updating timeline file:', error);
       throw new Error(`Failed to update timeline file: ${error}`);
     }
+  }
+
+  private toTimelineJson(event: TimelineEntry): {
+    year: number;
+    month: string;
+    title: string;
+    description: string;
+    category: TimelineEntry['category'];
+    link: string;
+  } {
+    const date = new Date(event.date);
+    const year = date.getUTCFullYear();
+    const month = MONTH_NAMES[date.getUTCMonth()] ?? MONTH_NAMES[0];
+    const link = event.sources[0] ?? '';
+
+    return {
+      year,
+      month,
+      title: event.title,
+      description: event.description,
+      category: event.category,
+      link
+    };
   }
 
   // Public method for creating a PR (delegates to private method)
@@ -473,3 +497,17 @@ export class GitHubManager {
     return breakdown;
   }
 }
+const MONTH_NAMES: readonly string[] = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December'
+];
