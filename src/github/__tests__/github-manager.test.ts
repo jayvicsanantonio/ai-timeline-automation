@@ -3,7 +3,7 @@
  */
 
 import { Octokit } from '@octokit/rest';
-import type { AnalyzedEvent } from '../../types';
+import type { AnalyzedEvent, TimelineEntry } from '../../types';
 import { GitHubManager } from '../github-manager';
 import { TimelineReader } from '../timeline-reader';
 
@@ -16,11 +16,7 @@ jest.mock('../timeline-reader', () => ({
     fetchTimeline: jest.fn().mockResolvedValue({
       events: [],
       sha: 'test-sha',
-      content: JSON.stringify({
-        lastUpdated: '2024-01-01T00:00:00Z',
-        totalEntries: 0,
-        entries: []
-      })
+      content: '[]\n'
     }),
     validateNewEvents: jest.fn().mockReturnValue({
       valid: true,
@@ -156,6 +152,56 @@ describe('GitHubManager', () => {
       const result = await manager.createTimelineUpdatePR(mockAnalyzedEvents, 10, 2024);
 
       expect(result.branch).toBe('auto-update/week-2024-10');
+    });
+
+    it('should append new events without mutating existing timeline entries', async () => {
+      const existingTimelineEvent: TimelineEntry = {
+        id: '2023-06-01-existing-event',
+        date: '2023-06-01T00:00:00.000Z',
+        title: 'Existing Event',
+        description: 'Existing description',
+        category: 'Research Breakthroughs',
+        sources: ['https://example.com/existing'],
+        impact_score: 6
+      };
+
+      const existingObject = [
+        '  {',
+        '    "year": 2023,',
+        '    "month": "June",',
+        '    "title": "Existing Event",',
+        '    "description": "Existing description",',
+        '    "category": "Research Breakthroughs",',
+        '    "link": "https://example.com/existing"',
+        '  }'
+      ].join('\n');
+
+      const existingContent = `[` + '\n' + existingObject + '\n' + `]` + '\n';
+
+      const mockTimelineReader = (TimelineReader as jest.MockedClass<typeof TimelineReader>).mock
+        .results[0].value;
+
+      mockTimelineReader.fetchTimeline = jest.fn().mockResolvedValue({
+        events: [existingTimelineEvent],
+        sha: 'existing-sha',
+        content: existingContent
+      });
+
+      await manager.createTimelineUpdatePR(mockAnalyzedEvents, 22, 2024);
+
+      const mockOctokitInstance = (Octokit as jest.MockedClass<typeof Octokit>).mock.results[0]
+        .value;
+
+      expect(mockOctokitInstance.repos.createOrUpdateFileContents).toHaveBeenCalled();
+
+      const { content } = mockOctokitInstance.repos.createOrUpdateFileContents.mock.calls[0][0];
+      const updatedContent = Buffer.from(content, 'base64').toString('utf-8');
+
+      expect(updatedContent).toContain(existingObject);
+      expect(updatedContent.indexOf('"Existing Event"')).toBeLessThan(
+        updatedContent.indexOf('"AI Breakthrough"')
+      );
+      expect(updatedContent.trim().endsWith(']')).toBe(true);
     });
   });
 
