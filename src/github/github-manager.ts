@@ -252,13 +252,10 @@ export class GitHubManager {
     newEvents: TimelineEntry[],
     branchName: string
   ): Promise<string> {
-    // Merge and sort events chronologically
-    const allEvents = [...currentTimeline.events, ...newEvents].sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    const updatedContent = this.appendEventsToTimelineContent(
+      currentTimeline.content,
+      newEvents
     );
-
-    const rawEvents = allEvents.map((event) => this.toTimelineJson(event));
-    const updatedContent = JSON.stringify(rawEvents, null, 2);
 
     // Update file on GitHub
     try {
@@ -301,6 +298,56 @@ export class GitHubManager {
       category: event.category,
       link
     };
+  }
+
+  private appendEventsToTimelineContent(
+    currentContent: string,
+    newEvents: TimelineEntry[]
+  ): string {
+    if (newEvents.length === 0) {
+      return currentContent;
+    }
+
+    const newline = currentContent.includes('\r\n') ? '\r\n' : '\n';
+    const formattedEvents = newEvents.map((event) => this.formatTimelineEvent(event, newline));
+
+    const trimmedContent = currentContent.trim();
+    const isEmptyArray = /^\[\s*\]$/.test(trimmedContent);
+
+    if (trimmedContent === '' || isEmptyArray) {
+      const body = formattedEvents.join(`,${newline}`);
+      const trailingWhitespace = currentContent.slice(currentContent.trimEnd().length);
+      const closingWhitespace = trailingWhitespace || newline;
+      return `[` + (body ? `${newline}${body}${newline}` : '') + `]${closingWhitespace}`;
+    }
+
+    if (!trimmedContent.startsWith('[') || !trimmedContent.endsWith(']')) {
+      throw new Error('Timeline content must be a JSON array');
+    }
+
+    const closingBracketIndex = currentContent.lastIndexOf(']');
+    if (closingBracketIndex === -1) {
+      throw new Error('Timeline content missing closing bracket');
+    }
+
+    const prefix = currentContent.slice(0, closingBracketIndex);
+    const suffix = currentContent.slice(closingBracketIndex);
+
+    const trimmedPrefix = prefix.replace(/\s*$/, '');
+    const needsComma = !trimmedPrefix.trim().endsWith('[');
+    const separator = needsComma ? ',' : '';
+
+    const updatedBody = `${trimmedPrefix}${separator}${newline}${formattedEvents.join(`,${newline}`)}${newline}`;
+
+    return `${updatedBody}${suffix}`;
+  }
+
+  private formatTimelineEvent(event: TimelineEntry, newline: string): string {
+    const json = JSON.stringify(this.toTimelineJson(event), null, 2).replace(/\n/g, newline);
+    return json
+      .split(newline)
+      .map((line) => (line.length > 0 ? `  ${line}` : line))
+      .join(newline);
   }
 
   // Public method for creating a PR (delegates to private method)

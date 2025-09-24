@@ -1,24 +1,19 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-TypeScript sources live in `src/`: `collectors/` ingest feeds, `analyzers/` score events, `orchestrator/` coordinates weekly updates, `github/` manages PRs, and shared helpers land in `lib/`, `providers/`, `types/`, `utils/`. Tests sit beside code in `src/**/__tests__` with reusable fixtures in `tests/__fixtures__/`. Build outputs go to `dist/`, and reference docs sit in `docs/` and `project-specs/`.
+TypeScript sources live in `src/`, grouped by responsibility: collectors ingest feeds, analyzers score events, the orchestrator coordinates weekly updates, GitHub helpers manage pull requests, and shared utilities sit under `lib/`, `providers/`, `types/`, and `utils/`. Tests reside alongside code in `src/**/__tests__`, with reusable fixtures in `tests/__fixtures__/`. Build artifacts land in `dist/`, while documentation is organized under `docs/` and `project-specs/` for quick reference.
 
 ## Build, Test, and Development Commands
-- `npm run dev` — run `tsx src/index.ts` with reload for local work.
-- `npm run build` — transpile to `dist/` after `npm run clean`.
-- `npm run update` / `npm start` — execute the production entrypoint in Node.
-- `npm run lint` / `npm run lint:fix` — enforce ESLint rules defined in `.eslintrc.json`.
-- `npm run typecheck` — run `tsc --noEmit`; gate pull requests on a clean exit.
-- `npm test`, `npm run test:watch`, `npm run test:coverage` — drive the Jest suite and collect coverage reports.
+Use `npm run dev` for a hot-reloading development loop via `tsx src/index.ts`. Ship-ready bundles come from `npm run build`, which cleans and transpiles to `dist/`. Production execution flows through `npm run update` or `npm start`. Maintain lint hygiene with `npm run lint` or auto-fixes using `npm run lint:fix`. Validate types through `npm run typecheck`, and drive the Jest suite with `npm test`, `npm run test:watch`, or `npm run test:coverage`.
 
 ## Coding Style & Naming Conventions
-Stick to Node 18+, strict TypeScript, two-space indentation, and semicolons. Favor `async/await`, explicit return types on exported APIs, and dependency-injected constructors. ESLint (`@typescript-eslint/recommended`) flags unused identifiers—prefix intentional ignores with `_`—and warns on `any`. Name classes and interfaces in PascalCase, functions and variables in camelCase, constants in UPPER_SNAKE_CASE, and files in kebab-case such as `timeline-orchestrator.ts`.
+Target Node 18+ and strict TypeScript. Follow two-space indentation, semicolons, and prefer `async/await`. Exported APIs need explicit return types, and dependency injection should drive constructor design. Suppress intentional unused values with an `_` prefix to satisfy ESLint (`@typescript-eslint/recommended`). Name files in kebab-case (e.g., `timeline-orchestrator.ts`), classes and interfaces in PascalCase, and constants in UPPER_SNAKE_CASE.
 
 ## Testing Guidelines
-Jest with `ts-jest` targets `src/**/__tests__` (see `jest.config.js`). Add `.test.ts` or `.spec.ts` files next to the module under test and pull shared payloads from `tests/__fixtures__/`. Maintain the configured minimums (≥30% lines/statements, ≥25% branches, ≥30% functions) and inspect `coverage/lcov-report/index.html` before submitting. Use `npm run test:watch` for tight feedback loops.
+Jest with `ts-jest` powers the suite. Name tests `*.test.ts` or `*.spec.ts` beside their modules, reusing fixtures from `tests/__fixtures__/`. Before merging, ensure coverage stays above 30% for lines/statements, 25% for branches, and 30% for functions; inspect `coverage/lcov-report/index.html` when investigating gaps. Favor targeted unit specs alongside orchestrated integration checks.
 
 ## Commit & Pull Request Guidelines
-Write imperative, sentence-case subjects ≤72 characters—recent history shows verbs like “Enhance”, “Fix”, and “Add”. Keep commits focused, add detail in the body when touching automation or CI, and push from branches named after the change type (`feature/...`, `fix/...`, `docs/...`, etc.). Pull requests should link issues, summarize impact, include evidence of `npm test` (or coverage) runs, and highlight changes to `.env` expectations or `NEWS_SOURCES_STATUS.md`.
+Craft imperative, sentence-case commit subjects under 72 characters (e.g., “Enhance timeline analyzer”). Keep each commit focused, expanding in the body when touching automation or CI. Branch names should reflect intent (`feature/...`, `fix/...`, `docs/...`). Pull requests must link relevant issues, summarize impact, document `npm test` results, and flag any `.env` or `NEWS_SOURCES_STATUS.md` adjustments. Screenshots or logs help reviewers when behavior changes.
 
-## Environment & Secrets
-Copy `.env.example` to `.env` and populate keys (`OPENAI_API_KEY`, `GITHUB_TOKEN`, feed overrides). Never commit secrets; rely on GitHub Actions secrets for scheduled updates. Scripts like `test-automation.sh` and `test-github-workflow.sh` provide local smoke tests that mimic the CI environment.
+## Security & Configuration Tips
+Copy `.env.example` to `.env` and populate `OPENAI_API_KEY`, `GITHUB_TOKEN`, and feed overrides locally; never commit secrets. CI relies on GitHub Actions secrets, while scripts like `test-automation.sh` and `test-github-workflow.sh` mirror production smoke tests—run them before shipping major orchestrator updates.
