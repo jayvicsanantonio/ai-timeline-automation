@@ -22,13 +22,43 @@ sources:
     metadata:
       source_name: OpenAI Blog
   - id: anthropic
-    kind: rss
-    url: https://www.anthropic.com/news.xml
+    kind: html
+    url: https://www.anthropic.com/news
     enabled: false
   - id: huggingface
     kind: rss
     url: https://huggingface.co/blog/feed.xml
     enabled: true
+  - id: gemini_product_news
+    kind: html
+    url: https://blog.google/products/gemini
+    enabled: true
+    metadata:
+      source_name: Gemini Product News
+  - id: xai_news
+    kind: html
+    url: https://x.ai/news
+    enabled: true
+    metadata:
+      source_name: xAI News
+  - id: meta_ai_blog
+    kind: html
+    url: https://ai.meta.com/blog/
+    enabled: true
+    metadata:
+      source_name: Meta AI Blog
+  - id: microsoft_ai_news
+    kind: rss
+    url: https://news.microsoft.com/source/tag/ai/feed
+    enabled: true
+    metadata:
+      source_name: Microsoft AI News
+  - id: google_ai_news
+    kind: rss
+    url: https://news.google.com/rss/search?q=ai&hl=en-US&gl=US&ceid=US:en
+    enabled: true
+    metadata:
+      source_name: Google AI News
   - id: paperswithcode
     kind: api
     url: https://paperswithcode.com/api/latest
