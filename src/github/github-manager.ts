@@ -252,10 +252,7 @@ export class GitHubManager {
     newEvents: TimelineEntry[],
     branchName: string
   ): Promise<string> {
-    const updatedContent = this.appendEventsToTimelineContent(
-      currentTimeline.content,
-      newEvents
-    );
+    const updatedContent = this.appendEventsToTimelineContent(currentTimeline.content, newEvents);
 
     // Update file on GitHub
     try {

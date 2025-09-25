@@ -154,6 +154,14 @@ export class EventAnalyzer {
       try {
         const analysis = await this.performLLMAnalysis(event, provider);
 
+        const sanitizedTitle = this.sanitizeAnalysisText(analysis.title, event.title, 200);
+
+        const sanitizedDescription = this.sanitizeAnalysisText(
+          analysis.description,
+          this.buildFallbackDescription(event),
+          1000
+        );
+
         // Calculate overall impact score
         const impactScore = this.calculateImpactScore(analysis.significance);
 
@@ -162,9 +170,9 @@ export class EventAnalyzer {
 
         return {
           id,
-          title: analysis.title,
+          title: sanitizedTitle,
           date: event.date.toISOString(),
-          description: analysis.description,
+          description: sanitizedDescription,
           category: analysis.category as EventCategory,
           sources: [event.url].filter(Boolean),
           url: event.url,
@@ -330,6 +338,111 @@ export class EventAnalyzer {
     return `${dateStr}-${titleSlug}`;
   }
 
+  private sanitizeAnalysisText(value: string, fallback: string, maxLength: number): string {
+    const stripped = this.stripPromptArtifacts(value);
+    const hasArtifacts =
+      stripped.length === 0 || PROMPT_ARTIFACT_PATTERNS.some((pattern) => pattern.test(stripped));
+
+    let candidate = hasArtifacts ? '' : stripped;
+
+    if (!candidate) {
+      const fallbackStripped = this.stripPromptArtifacts(fallback);
+      candidate = fallbackStripped || fallback;
+    }
+
+    candidate = candidate.replace(/\s+/g, ' ').trim();
+
+    if (!candidate) {
+      candidate = 'Summary unavailable.';
+    }
+
+    if (candidate.length > maxLength) {
+      candidate = candidate.slice(0, maxLength).trim();
+    }
+
+    return candidate;
+  }
+
+  private stripPromptArtifacts(value: string): string {
+    if (!value) {
+      return '';
+    }
+
+    const normalized = value.replace(/\r\n/g, '\n');
+    const lines = normalized.split('\n');
+    const cleanedLines: string[] = [];
+
+    for (const rawLine of lines) {
+      let line = rawLine.trim();
+      if (!line) continue;
+
+      if (/^return the json object now/i.test(line)) {
+        continue;
+      }
+
+      if (/^event briefing for analysis:?$/i.test(line)) {
+        continue;
+      }
+
+      if (/^full content:?$/i.test(line)) {
+        continue;
+      }
+
+      if (/^do not include explanations or commentary.?$/i.test(line)) {
+        continue;
+      }
+
+      if (/^additional context:/i.test(line)) {
+        continue;
+      }
+
+      if (/^authors?:/i.test(line)) {
+        continue;
+      }
+
+      if (/^abstract:/i.test(line)) {
+        continue;
+      }
+
+      if (/^published on:/i.test(line)) {
+        continue;
+      }
+
+      if (/^source:/i.test(line)) {
+        continue;
+      }
+
+      if (/^url:/i.test(line)) {
+        continue;
+      }
+
+      if (/^title:\s*(.*)$/i.test(line)) {
+        line = line.replace(/^title:\s*/i, '');
+      }
+
+      line = line
+        .replace(/Event briefing for analysis:?/gi, ' ')
+        .replace(/Return the JSON object now\.?/gi, ' ')
+        .replace(/Do not include explanations or commentary\.?/gi, ' ')
+        .replace(/Full content:?/gi, ' ')
+        .replace(/Title:\s*/gi, ' ')
+        .trim();
+
+      if (!line) continue;
+
+      cleanedLines.push(line);
+    }
+
+    return cleanedLines.join(' ').replace(/\s+/g, ' ').trim();
+  }
+
+  private buildFallbackDescription(event: RawEvent): string {
+    const normalized = event.content.replace(/\r\n/g, '\n');
+    const paragraphs = normalized.split(/\n{2,}/);
+    const firstParagraph = paragraphs.length > 0 ? paragraphs[0] : normalized;
+    return firstParagraph.replace(/\s+/g, ' ').trim();
+  }
+
   /**
    * Rank and select the most significant events
    */
@@ -414,3 +527,16 @@ export class EventAnalyzer {
     return lines.join('\n');
   }
 }
+
+const PROMPT_ARTIFACT_PATTERNS = [
+  /event briefing for analysis/i,
+  /return the json object now/i,
+  /full content/i,
+  /do not include explanations or commentary/i,
+  /published on:/i,
+  /source:/i,
+  /url:/i,
+  /abstract:/i,
+  /authors?:/i,
+  /additional context:/i
+];
