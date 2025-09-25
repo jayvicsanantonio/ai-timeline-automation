@@ -3,11 +3,6 @@ defaults:
   rate_limit_qpm: 30
   timeout_ms: 15000
 sources:
-  - id: arxiv
-    kind: rss
-    url: https://arxiv.org/rss/cs.AI
-    rate_limit_qpm: 30
-    enabled: true
   - id: deepmind_blog
     kind: html
     url: https://deepmind.google/discover/blog/

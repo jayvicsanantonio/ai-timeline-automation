@@ -10,7 +10,7 @@
    - Secrets:
      - `OPENAI_API_KEY`
      - `GIT_TOKEN` (PAT or GitHub App token with contents/pulls scope)
-     - Optional: `HACKERNEWS_API_KEY`, `ARXIV_API_KEY`
+     - Optional: `HACKERNEWS_API_KEY`
    - Repository variables:
      - `TIMELINE_REPO` (e.g., `owner/repo`)
      - Optional: `DRY_RUN`, `LOG_LEVEL`, `SUMMARY_ISSUE_NUMBER`
@@ -64,7 +64,6 @@ npm run update
 - `npm test -- connectors` &mdash; connector contract tests (uses fixtures under `tests/__fixtures__/`).
 
 ## 7. Connector Cheat Sheet
-- **ArXiv (cs.AI RSS)** &mdash; scientific papers feed, enabled by default.
 - **DeepMind Blog** (HTML/JSON-LD) &mdash; handles structured data + article fallback; add fixtures if DeepMind changes layout.
 - **OpenAI Blog** (RSS) &mdash; includes metadata (`source_name: OpenAI Blog`), rate-limited to 20 QPM.
 - **Hugging Face Blog** (RSS) &mdash; enabled feed for community/feature updates.

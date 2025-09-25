@@ -26,7 +26,7 @@
 
 The AI Timeline Automation System automatically:
 
-1. **Collects** AI-related news and research from multiple sources (ArXiv, DeepMind Blog, OpenAI Blog, Hugging Face Blog, and more RSS/API feeds)
+1. **Collects** AI-related news and research from multiple sources (DeepMind Blog, OpenAI Blog, Hugging Face Blog, Microsoft AI News, Google AI News, and more curated feeds)
 2. **Deduplicates** similar content to avoid redundancy
 3. **Analyzes** content using AI to determine significance and impact
 4. **Curates** the most important developments based on configurable thresholds
@@ -37,7 +37,6 @@ The AI Timeline Automation System automatically:
 
 ### 🔄 **Multi-Source Data Collection**
 
-- **ArXiv**: Latest AI/ML research papers (cs.AI feed)
 - **DeepMind/OpenAI/Hugging Face Blogs**: Official announcements and research posts
 - **Extensible RSS/API connectors**: Enable or add new feeds in `config/sources.yaml`
 - **Extensible**: Easy to add new data sources
@@ -70,7 +69,7 @@ The AI Timeline Automation System automatically:
 │   Data Sources  │    │   Processing    │    │     Output      │
 ├─────────────────┤    ├─────────────────┤    ├─────────────────┤
 │ • HackerNews    │───▶│ • Collection    │───▶│ • Timeline JSON │
-│ • ArXiv Papers  │    │ • Deduplication │    │ • GitHub PR     │
+│ • Vendor Blogs  │    │ • Deduplication │    │ • GitHub PR     │
 │ • RSS Feeds     │    │ • AI Analysis   │    │ • Notifications │
 └─────────────────┘    │ • Scoring       │    └─────────────────┘
                        │ • Selection     │
@@ -169,13 +168,12 @@ TIMELINE_REPO=username/ai-timeline       # Target repository (owner/repo)
 # Optional Configuration
 MAX_EVENTS_PER_WEEK=3                    # Maximum events to include per week
 SIGNIFICANCE_THRESHOLD=7.0               # Minimum significance score (0-10)
-NEWS_SOURCES=hackernews,arxiv,rss        # Comma-separated source list
+NEWS_SOURCES=hackernews,openai_blog,rss  # Comma-separated source list
 LOG_LEVEL=info                           # Logging level (error|warn|info|debug)
 DRY_RUN=false                           # Set to true for testing without GitHub updates
 
 # Optional API Keys
 HACKERNEWS_API_KEY=...                  # HackerNews API key (if required)
-ARXIV_API_KEY=...                       # ArXiv API key (if required)
 ```
 
 ## 🎮 Usage
