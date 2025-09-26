@@ -43,6 +43,7 @@ export class DeepMindBlogConnector extends AbstractSourceConnector {
     const metadataUserAgent = metadata['user_agent'];
     const metadataAcceptLanguage = metadata['accept_language'];
     const metadataHeaders = this.normalizeHeaders(metadata['http_headers']);
+    const refererHeader = this.normalizeReferer(metadata['referer']);
 
     const userAgent = typeof metadataUserAgent === 'string' && metadataUserAgent.trim().length > 0
       ? metadataUserAgent.trim()
@@ -60,6 +61,10 @@ export class DeepMindBlogConnector extends AbstractSourceConnector {
       'Cache-Control': 'no-cache',
       ...metadataHeaders
     };
+
+    if (refererHeader) {
+      this.requestHeaders.Referer = refererHeader;
+    }
   }
 
   async fetch(options: SourceFetchOptions): Promise<RawItem[]> {
@@ -98,6 +103,25 @@ export class DeepMindBlogConnector extends AbstractSourceConnector {
     }
 
     return headers;
+  }
+
+  private normalizeReferer(value: unknown): string | undefined {
+    if (typeof value !== 'string') {
+      return undefined;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return undefined;
+    }
+
+    try {
+      const refererUrl = new URL(trimmed);
+      return refererUrl.toString();
+    } catch {
+      console.warn(`Invalid referer configured for ${this.id}: ${value}`);
+      return undefined;
+    }
   }
 
   private extractFromJsonLd($: CheerioAPI): RawItem[] {
