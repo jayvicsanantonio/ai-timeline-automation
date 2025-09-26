@@ -484,10 +484,7 @@ export class EventAnalyzer {
     }
 
     let cleaned = value;
-    cleaned = cleaned.replace(
-      /The post\s+(.*?)(?:\s+appeared first on\s+.*?)(?:[.!?]|$)/gi,
-      '$1'
-    );
+    cleaned = cleaned.replace(/The post\s+(.*?)(?:\s+appeared first on\s+.*?)(?:[.!?]|$)/gi, '$1');
     cleaned = cleaned.replace(/This article was originally published on .*?$/gi, '');
     cleaned = cleaned.replace(/Read more on .*?$/gi, '');
     cleaned = cleaned.replace(/The post\s+$/gi, '');
@@ -532,9 +529,9 @@ export class EventAnalyzer {
       return null;
     }
 
-    const sentences = trimmed.slice(0, 2).map((insight) =>
-      /[.!?]$/.test(insight) ? insight : `${insight}.`
-    );
+    const sentences = trimmed
+      .slice(0, 2)
+      .map((insight) => (/[.!?]$/.test(insight) ? insight : `${insight}.`));
 
     return `Key takeaways: ${sentences.join(' ')}`.trim();
   }

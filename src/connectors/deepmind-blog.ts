@@ -49,9 +49,10 @@ export class DeepMindBlogConnector extends AbstractSourceConnector {
     const requestUrlOverride = this.normalizeUrl(metadata['fetch_url']);
     const fallbackUrl = this.normalizeUrl(metadata['fallback_fetch_url']);
 
-    const userAgent = typeof metadataUserAgent === 'string' && metadataUserAgent.trim().length > 0
-      ? metadataUserAgent.trim()
-      : DEFAULT_USER_AGENT;
+    const userAgent =
+      typeof metadataUserAgent === 'string' && metadataUserAgent.trim().length > 0
+        ? metadataUserAgent.trim()
+        : DEFAULT_USER_AGENT;
 
     const acceptLanguage =
       typeof metadataAcceptLanguage === 'string' && metadataAcceptLanguage.trim().length > 0
