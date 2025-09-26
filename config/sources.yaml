@@ -46,9 +46,10 @@ sources:
         Sec-Fetch-Mode: navigate
         Sec-Fetch-User: '?1'
         Upgrade-Insecure-Requests: '1'
-        Referer: https://x.ai/
         Cache-Control: no-cache
         Pragma: no-cache
+      referer: https://x.ai/
+      fallback_fetch_url: https://r.jina.ai/https://x.ai/news
   - id: meta_ai_blog
     kind: html
     url: https://ai.meta.com/blog/

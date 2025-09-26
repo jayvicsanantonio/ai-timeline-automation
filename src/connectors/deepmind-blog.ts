@@ -33,6 +33,8 @@ type JsonLdAuthor = {
 export class DeepMindBlogConnector extends AbstractSourceConnector {
   private readonly baseUrl: string;
   private readonly requestHeaders: Record<string, string>;
+  private readonly requestUrl: string;
+  private readonly fallbackUrl?: string;
 
   constructor(init: SourceConnectorInit) {
     super(init);
@@ -44,6 +46,8 @@ export class DeepMindBlogConnector extends AbstractSourceConnector {
     const metadataAcceptLanguage = metadata['accept_language'];
     const metadataHeaders = this.normalizeHeaders(metadata['http_headers']);
     const refererHeader = this.normalizeReferer(metadata['referer']);
+    const requestUrlOverride = this.normalizeUrl(metadata['fetch_url']);
+    const fallbackUrl = this.normalizeUrl(metadata['fallback_fetch_url']);
 
     const userAgent = typeof metadataUserAgent === 'string' && metadataUserAgent.trim().length > 0
       ? metadataUserAgent.trim()
@@ -65,6 +69,9 @@ export class DeepMindBlogConnector extends AbstractSourceConnector {
     if (refererHeader) {
       this.requestHeaders.Referer = refererHeader;
     }
+
+    this.requestUrl = requestUrlOverride ?? this.url;
+    this.fallbackUrl = fallbackUrl;
   }
 
   async fetch(options: SourceFetchOptions): Promise<RawItem[]> {
@@ -73,21 +80,30 @@ export class DeepMindBlogConnector extends AbstractSourceConnector {
     }
 
     const timeout = this.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    const urlsToTry = [this.requestUrl, this.fallbackUrl].filter(
+      (url): url is string => typeof url === 'string' && url.length > 0
+    );
 
-    try {
-      const payload = await fetchText(this.url, {
-        timeout,
-        signal: options.signal,
-        headers: this.requestHeaders
-      });
+    let lastError: unknown;
 
-      const $ = loadHtml(payload);
-      const candidates = [...this.extractFromJsonLd($), ...this.extractFromArticles($)];
-      const unique = this.deduplicateById(candidates);
-      return this.filterWindow(unique, options);
-    } catch (error) {
-      throw new NewsSourceError(this.id, 'Failed to fetch HTML source', error);
+    for (const requestUrl of urlsToTry) {
+      try {
+        const payload = await fetchText(requestUrl, {
+          timeout,
+          signal: options.signal,
+          headers: this.requestHeaders
+        });
+
+        const $ = loadHtml(payload);
+        const candidates = [...this.extractFromJsonLd($), ...this.extractFromArticles($)];
+        const unique = this.deduplicateById(candidates);
+        return this.filterWindow(unique, options);
+      } catch (error) {
+        lastError = error;
+      }
     }
+
+    throw new NewsSourceError(this.id, 'Failed to fetch HTML source', lastError);
   }
 
   private normalizeHeaders(value: unknown): Record<string, string> {
@@ -120,6 +136,24 @@ export class DeepMindBlogConnector extends AbstractSourceConnector {
       return refererUrl.toString();
     } catch {
       console.warn(`Invalid referer configured for ${this.id}: ${value}`);
+      return undefined;
+    }
+  }
+
+  private normalizeUrl(value: unknown): string | undefined {
+    if (typeof value !== 'string') {
+      return undefined;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return undefined;
+    }
+
+    try {
+      return new URL(trimmed).toString();
+    } catch {
+      console.warn(`Invalid URL configured for ${this.id}: ${value}`);
       return undefined;
     }
   }
