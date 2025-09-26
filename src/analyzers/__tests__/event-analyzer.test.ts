@@ -64,11 +64,40 @@ describe('EventAnalyzer sanitization', () => {
     expect(analyzed.title).toBe('Fallback Title From Source');
     expect(analyzed.description).toBe('First paragraph with the essential summary.');
   });
+
+  it('replaces boilerplate descriptions with insights summary', async () => {
+    const provider = createStubProvider({
+      title: 'AI chips are getting hotter. A microfluidics breakthrough goes mainstream',
+      description:
+        'The post AI chips are getting hotter. A microfluidics breakthrough goes mainstream appeared first on TechDigest.',
+      keyInsights: [
+        'Microfluidic cooling is moving from labs into hyperscale data centres',
+        'Vendors are co-developing standards to manage rising AI chip thermals'
+      ]
+    });
+
+    const analyzer = new EventAnalyzer({}, { llmProvider: provider });
+
+    const event: RawEvent = {
+      title: 'Cooling advances keep AI chips in check',
+      date: new Date('2024-02-20T00:00:00Z'),
+      source: 'TechDigest',
+      url: 'https://example.com/ai-chips',
+      content: 'Vendors are racing to cool ever-hotter AI accelerators.',
+      metadata: {}
+    };
+
+    const [analyzed] = await analyzer.analyzeEvents([event]);
+
+    expect(analyzed.description).toMatch(/^Key takeaways:/);
+    expect(analyzed.description).toContain('Microfluidic cooling is moving from labs');
+  });
 });
 
 type StubAnalysis = {
   title: string;
   description: string;
+  keyInsights?: string[];
 };
 
 function createStubProvider(result: StubAnalysis): LLMProvider {
@@ -91,7 +120,7 @@ function createStubProvider(result: StubAnalysis): LLMProvider {
             adoptionScale: 6,
             novelty: 7
           },
-          keyInsights: ['Insight 1', 'Insight 2'],
+          keyInsights: result.keyInsights ?? ['Insight 1', 'Insight 2'],
           relatedTopics: ['ai', 'chips']
         }),
         finishReason: 'stop',

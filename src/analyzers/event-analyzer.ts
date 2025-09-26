@@ -154,13 +154,48 @@ export class EventAnalyzer {
       try {
         const analysis = await this.performLLMAnalysis(event, provider);
 
-        const sanitizedTitle = this.sanitizeAnalysisText(analysis.title, event.title, 200);
+        const cleanedTitleFromLLM = this.stripPromptArtifacts(analysis.title);
+        let sanitizedTitle = this.sanitizeAnalysisText(
+          cleanedTitleFromLLM || analysis.title,
+          event.title,
+          200
+        );
 
-        const sanitizedDescription = this.sanitizeAnalysisText(
-          analysis.description,
-          this.buildFallbackDescription(event),
+        if (
+          cleanedTitleFromLLM &&
+          sanitizedTitle &&
+          cleanedTitleFromLLM.length > sanitizedTitle.length &&
+          cleanedTitleFromLLM.toLowerCase().startsWith(sanitizedTitle.toLowerCase())
+        ) {
+          sanitizedTitle = cleanedTitleFromLLM.slice(0, 200).trim();
+        }
+
+        if (!sanitizedTitle) {
+          sanitizedTitle = this.stripPromptArtifacts(event.title) || 'AI development update';
+        }
+
+        const cleanedDescriptionFromLLM = this.stripPromptArtifacts(analysis.description);
+        const fallbackDescription = this.buildFallbackDescription(event);
+        const cleanedFallbackDescription = this.cleanDescriptionText(fallbackDescription);
+
+        let sanitizedDescription = this.sanitizeAnalysisText(
+          cleanedDescriptionFromLLM || analysis.description,
+          cleanedFallbackDescription,
           1000
         );
+
+        sanitizedDescription = this.cleanDescriptionText(sanitizedDescription);
+
+        if (this.isLowQualityDescription(sanitizedDescription, sanitizedTitle)) {
+          const insightsSummary = this.buildInsightsSummary(analysis.keyInsights);
+          if (insightsSummary) {
+            sanitizedDescription = insightsSummary;
+          } else if (cleanedFallbackDescription) {
+            sanitizedDescription = cleanedFallbackDescription;
+          } else {
+            sanitizedDescription = 'Summary unavailable.';
+          }
+        }
 
         // Calculate overall impact score
         const impactScore = this.calculateImpactScore(analysis.significance);
@@ -443,6 +478,67 @@ export class EventAnalyzer {
     return firstParagraph.replace(/\s+/g, ' ').trim();
   }
 
+  private cleanDescriptionText(value: string): string {
+    if (!value) {
+      return '';
+    }
+
+    let cleaned = value;
+    cleaned = cleaned.replace(
+      /The post\s+(.*?)(?:\s+appeared first on\s+.*?)(?:[.!?]|$)/gi,
+      '$1'
+    );
+    cleaned = cleaned.replace(/This article was originally published on .*?$/gi, '');
+    cleaned = cleaned.replace(/Read more on .*?$/gi, '');
+    cleaned = cleaned.replace(/The post\s+$/gi, '');
+    cleaned = cleaned.replace(/Follow us on social media.*$/gi, '');
+
+    return cleaned.replace(/\s+/g, ' ').trim();
+  }
+
+  private isLowQualityDescription(description: string, title: string): boolean {
+    if (!description) {
+      return true;
+    }
+
+    const normalizedDescription = description.trim().toLowerCase();
+    if (!normalizedDescription) {
+      return true;
+    }
+
+    if (normalizedDescription === title.trim().toLowerCase()) {
+      return true;
+    }
+
+    if (/^the post\b/i.test(description)) {
+      return true;
+    }
+
+    const wordCount = normalizedDescription.split(/\s+/).length;
+    if (wordCount <= 5) {
+      return true;
+    }
+
+    return false;
+  }
+
+  private buildInsightsSummary(insights: string[]): string | null {
+    if (!Array.isArray(insights) || insights.length === 0) {
+      return null;
+    }
+
+    const trimmed = insights.map((insight) => insight.trim()).filter(Boolean);
+    if (trimmed.length === 0) {
+      return null;
+    }
+
+    const sentences = trimmed.slice(0, 2).map((insight) =>
+      /[.!?]$/.test(insight) ? insight : `${insight}.`
+    );
+
+    return `Key takeaways: ${sentences.join(' ')}`.trim();
+  }
+
   /**
    * Rank and select the most significant events
    */
@@ -487,7 +583,7 @@ export class EventAnalyzer {
       return 'No significant events found this week.';
     }
 
-    const lines = ['## Daily AI Timeline Update\n'];
+    const lines = ['## Weekly AI Timeline Update\n'];
     lines.push(
       `Selected ${events.length} significant AI development${
         events.length > 1 ? 's' : ''

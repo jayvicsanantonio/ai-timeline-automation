@@ -251,6 +251,35 @@ describe('TimelineReader', () => {
       expect(filtered).toHaveLength(1);
       expect(filtered[0].id).toBe('event-2');
     });
+
+    it('should filter out events with matching title in the same month', () => {
+      const existingEvents: TimelineEntry[] = [
+        {
+          id: '2024-05-01-sap-and-openai-partner',
+          date: '2024-05-01T00:00:00.000Z',
+          title: 'SAP and OpenAI partner to launch sovereign OpenAI for Germany',
+          description: 'Existing description',
+          category: 'Public Releases',
+          sources: ['https://example.com/sap-openai'],
+          impact_score: 8
+        }
+      ];
+
+      const newEvents: TimelineEntry[] = [
+        {
+          id: '2024-05-15-sap-and-openai-partner',
+          date: '2024-05-15T00:00:00.000Z',
+          title: 'SAP and OpenAI partner to launch sovereign OpenAI for Germany',
+          description: 'Duplicate description',
+          category: 'Public Releases',
+          sources: ['https://example.com/new-sap-openai'],
+          impact_score: 8.5
+        }
+      ];
+
+      const filtered = reader.filterNewEvents(newEvents, existingEvents);
+      expect(filtered).toHaveLength(0);
+    });
   });
 
   describe('getEventsInRange', () => {
@@ -488,8 +517,8 @@ describe('TimelineReader', () => {
 
       const validation = reader.validateNewEvents(newEvents, existingEvents);
 
-      expect(validation.valid).toBe(true);
-      expect(validation.warnings).toHaveLength(1);
+      expect(validation.valid).toBe(false);
+      expect(validation.conflicts[0]).toContain('duplicates existing timeline entry');
       expect(validation.warnings[0]).toContain('Potential duplicate');
     });
 
@@ -514,6 +543,37 @@ describe('TimelineReader', () => {
       expect(validation.valid).toBe(true);
       expect(validation.warnings).toHaveLength(1);
       expect(validation.warnings[0]).toContain('has a future date');
+    });
+
+    it('should flag duplicates that match by month and normalized title', () => {
+      const existingEvents: TimelineEntry[] = [
+        {
+          id: '2024-06-01-openai-oracle-partnership',
+          date: '2024-06-01T00:00:00.000Z',
+          title: 'OpenAI, Oracle, and SoftBank expand Stargate with five new AI hubs',
+          description: 'Existing event',
+          category: 'Public Releases',
+          sources: ['https://example.com/openai-oracle'],
+          impact_score: 7.5
+        }
+      ];
+
+      const newEvents: TimelineEntry[] = [
+        {
+          id: '2024-06-20-openai-oracle-partnership',
+          date: '2024-06-20T00:00:00.000Z',
+          title: 'OpenAI, Oracle, and SoftBank expand Stargate with five new AI hubs',
+          description: 'Duplicate incoming event',
+          category: 'Public Releases',
+          sources: ['https://example.com/new-openai-oracle'],
+          impact_score: 8
+        }
+      ];
+
+      const validation = reader.validateNewEvents(newEvents, existingEvents);
+
+      expect(validation.valid).toBe(false);
+      expect(validation.conflicts[0]).toContain('duplicates existing timeline entry');
     });
   });
 });

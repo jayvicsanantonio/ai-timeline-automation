@@ -305,10 +305,27 @@ export class TimelineReader {
 
   /**
    * Filter out events that already exist in the timeline
-   */
+  */
   filterNewEvents(newEvents: TimelineEntry[], existingEvents: TimelineEntry[]): TimelineEntry[] {
     const existingIds = new Set(existingEvents.map((e) => e.id));
-    return newEvents.filter((event) => !existingIds.has(event.id));
+    const existingKeys = new Set(existingEvents.map((e) => this.getDuplicateKey(e)));
+
+    return newEvents.filter((event) => {
+      if (existingIds.has(event.id)) {
+        return false;
+      }
+
+      const duplicateKey = this.getDuplicateKey(event);
+      if (existingKeys.has(duplicateKey)) {
+        console.warn(
+          `Skipping duplicate event "${event.title}" with existing key ${duplicateKey}`
+        );
+        return false;
+      }
+
+      existingKeys.add(duplicateKey);
+      return true;
+    });
   }
 
   /**
@@ -403,6 +420,8 @@ export class TimelineReader {
     };
 
     const existingIds = new Set(existingEvents.map((e) => e.id));
+    const existingKeys = new Set(existingEvents.map((e) => this.getDuplicateKey(e)));
+    const newKeys = new Set<string>();
 
     newEvents.forEach((event) => {
       // Check for ID conflicts
@@ -410,6 +429,23 @@ export class TimelineReader {
         result.conflicts.push(`Event ID already exists: ${event.id}`);
         result.valid = false;
       }
+
+      const duplicateKey = this.getDuplicateKey(event);
+      if (existingKeys.has(duplicateKey)) {
+        result.conflicts.push(
+          `Event duplicates existing timeline entry: "${event.title}" (${duplicateKey})`
+        );
+        result.valid = false;
+      }
+
+      if (newKeys.has(duplicateKey)) {
+        result.conflicts.push(
+          `Duplicate event in submission: "${event.title}" (${duplicateKey})`
+        );
+        result.valid = false;
+      }
+
+      newKeys.add(duplicateKey);
 
       // Check for very similar events on the same date
       const sameDateEvents = existingEvents.filter(
@@ -458,5 +494,17 @@ export class TimelineReader {
     const union = new Set(words1Array.concat(words2Array));
 
     return intersection.size / union.size;
+  }
+
+  private getDuplicateKey(event: TimelineEntry): string {
+    const date = new Date(event.date);
+    const year = date.getUTCFullYear();
+    const month = date.getUTCMonth() + 1;
+    const normalizedTitle = event.title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+
+    return `${year}-${String(month).padStart(2, '0')}-${normalizedTitle}`;
   }
 }
