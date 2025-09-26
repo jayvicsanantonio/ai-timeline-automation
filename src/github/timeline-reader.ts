@@ -305,7 +305,7 @@ export class TimelineReader {
 
   /**
    * Filter out events that already exist in the timeline
-  */
+   */
   filterNewEvents(newEvents: TimelineEntry[], existingEvents: TimelineEntry[]): TimelineEntry[] {
     const existingIds = new Set(existingEvents.map((e) => e.id));
     const existingKeys = new Set(existingEvents.map((e) => this.getDuplicateKey(e)));
@@ -317,9 +317,7 @@ export class TimelineReader {
 
       const duplicateKey = this.getDuplicateKey(event);
       if (existingKeys.has(duplicateKey)) {
-        console.warn(
-          `Skipping duplicate event "${event.title}" with existing key ${duplicateKey}`
-        );
+        console.warn(`Skipping duplicate event "${event.title}" with existing key ${duplicateKey}`);
         return false;
       }
 
@@ -439,9 +437,7 @@ export class TimelineReader {
       }
 
       if (newKeys.has(duplicateKey)) {
-        result.conflicts.push(
-          `Duplicate event in submission: "${event.title}" (${duplicateKey})`
-        );
+        result.conflicts.push(`Duplicate event in submission: "${event.title}" (${duplicateKey})`);
         result.valid = false;
       }
 

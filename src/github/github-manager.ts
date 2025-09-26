@@ -115,20 +115,6 @@ export class GitHubManager {
       // Fetch current timeline
       const currentTimeline = await this.timelineReader.fetchTimeline();
 
-      // Validate new events
-      const validation = this.timelineReader.validateNewEvents(
-        timelineEntries,
-        currentTimeline.events
-      );
-      if (!validation.valid) {
-        throw new Error(`Event validation failed: ${validation.conflicts.join(', ')}`);
-      }
-
-      if (validation.warnings.length > 0) {
-        console.warn('Validation warnings:', validation.warnings);
-      }
-
-      // Filter out any events that already exist
       const newEvents = this.timelineReader.filterNewEvents(
         timelineEntries,
         currentTimeline.events
@@ -137,6 +123,20 @@ export class GitHubManager {
         console.log('All events already exist in timeline');
         throw new Error('No new events to add');
       }
+
+      // Validate new events after filtering
+      const validation = this.timelineReader.validateNewEvents(newEvents, currentTimeline.events);
+      if (!validation.valid) {
+        throw new Error(`Event validation failed: ${validation.conflicts.join(', ')}`);
+      }
+
+      if (validation.warnings.length > 0) {
+        console.warn('Validation warnings:', validation.warnings);
+      }
+
+      const analyzedNewEvents = events.filter((event) =>
+        newEvents.some((entry) => entry.id === event.id)
+      );
 
       // Create or update branch
       await this.createOrUpdateBranch(branchName);
@@ -155,7 +155,7 @@ export class GitHubManager {
       );
 
       // Add labels
-      await this.addLabels(pr.number, events);
+      await this.addLabels(pr.number, analyzedNewEvents);
 
       console.log(`Successfully created PR #${pr.number}: ${pr.html_url}`);
 
