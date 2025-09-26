@@ -5,6 +5,10 @@ import { AbstractSourceConnector } from './base';
 import type { RawItem, SourceConnectorInit, SourceFetchOptions } from './types';
 
 const DEFAULT_TIMEOUT_MS = 15000;
+const DEFAULT_USER_AGENT =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36';
+const DEFAULT_ACCEPT = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8';
+const DEFAULT_ACCEPT_LANGUAGE = 'en-US,en;q=0.9';
 
 type JsonLdNode = {
   '@type'?: string | string[];
@@ -28,11 +32,34 @@ type JsonLdAuthor = {
 
 export class DeepMindBlogConnector extends AbstractSourceConnector {
   private readonly baseUrl: string;
+  private readonly requestHeaders: Record<string, string>;
 
   constructor(init: SourceConnectorInit) {
     super(init);
     const base = new URL(init.config.url);
     this.baseUrl = `${base.protocol}//${base.host}`;
+
+    const metadata = (init.config.metadata ?? {}) as Record<string, unknown>;
+    const metadataUserAgent = metadata['user_agent'];
+    const metadataAcceptLanguage = metadata['accept_language'];
+    const metadataHeaders = this.normalizeHeaders(metadata['http_headers']);
+
+    const userAgent = typeof metadataUserAgent === 'string' && metadataUserAgent.trim().length > 0
+      ? metadataUserAgent.trim()
+      : DEFAULT_USER_AGENT;
+
+    const acceptLanguage =
+      typeof metadataAcceptLanguage === 'string' && metadataAcceptLanguage.trim().length > 0
+        ? metadataAcceptLanguage.trim()
+        : DEFAULT_ACCEPT_LANGUAGE;
+
+    this.requestHeaders = {
+      Accept: DEFAULT_ACCEPT,
+      'Accept-Language': acceptLanguage,
+      'User-Agent': userAgent,
+      'Cache-Control': 'no-cache',
+      ...metadataHeaders
+    };
   }
 
   async fetch(options: SourceFetchOptions): Promise<RawItem[]> {
@@ -46,9 +73,7 @@ export class DeepMindBlogConnector extends AbstractSourceConnector {
       const payload = await fetchText(this.url, {
         timeout,
         signal: options.signal,
-        headers: {
-          'User-Agent': 'ai-timeline-bot/1.0 (+https://github.com/jayvicsanantonio/ai-timeline)'
-        }
+        headers: this.requestHeaders
       });
 
       const $ = loadHtml(payload);
@@ -56,8 +81,23 @@ export class DeepMindBlogConnector extends AbstractSourceConnector {
       const unique = this.deduplicateById(candidates);
       return this.filterWindow(unique, options);
     } catch (error) {
-      throw new NewsSourceError(this.id, 'Failed to fetch DeepMind blog', error);
+      throw new NewsSourceError(this.id, 'Failed to fetch HTML source', error);
     }
+  }
+
+  private normalizeHeaders(value: unknown): Record<string, string> {
+    if (!value || typeof value !== 'object') {
+      return {};
+    }
+
+    const headers: Record<string, string> = {};
+    for (const [key, rawValue] of Object.entries(value as Record<string, unknown>)) {
+      if (typeof rawValue === 'string' && rawValue.trim().length > 0) {
+        headers[key] = rawValue.trim();
+      }
+    }
+
+    return headers;
   }
 
   private extractFromJsonLd($: CheerioAPI): RawItem[] {

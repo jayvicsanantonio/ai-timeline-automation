@@ -42,6 +42,7 @@ sources:
     enabled: true
     metadata:
       source_name: Meta AI Blog
+      accept_language: en-US,en;q=0.9
   - id: microsoft_ai_news
     kind: rss
     url: https://news.microsoft.com/source/tag/ai/feed
