@@ -20,10 +20,14 @@ sources:
     kind: html
     url: https://www.anthropic.com/news
     enabled: false
+    metadata:
+      source_name: Anthropic News
   - id: huggingface
     kind: rss
     url: https://huggingface.co/blog/feed.xml
     enabled: true
+    metadata:
+      source_name: Hugging Face Blog
   - id: gemini_product_news
     kind: html
     url: https://blog.google/products/gemini
@@ -61,17 +65,19 @@ sources:
       fallback_fetch_url: https://r.jina.ai/https://ai.meta.com/blog/
   - id: microsoft_ai_news
     kind: rss
-    url: https://news.microsoft.com/source/tag/ai/feed
+    url: https://blogs.microsoft.com/ai/feed/
     enabled: true
     metadata:
-      source_name: Microsoft AI News
+      source_name: Microsoft AI Blog
   - id: google_ai_news
     kind: rss
-    url: https://news.google.com/rss/search?q=ai&hl=en-US&gl=US&ceid=US:en
+    url: https://blog.google/technology/ai/rss/
     enabled: true
     metadata:
-      source_name: Google AI News
+      source_name: Google AI Blog
   - id: paperswithcode
     kind: api
     url: https://paperswithcode.com/api/latest
     enabled: false
+    metadata:
+      source_name: Papers with Code

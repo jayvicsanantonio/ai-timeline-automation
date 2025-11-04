@@ -153,6 +153,8 @@ export class EventAnalyzer {
     while (retries < this.maxRetries) {
       try {
         const analysis = await this.performLLMAnalysis(event, provider);
+        const sanitizedInsights = this.sanitizeInsights(analysis.keyInsights);
+        const sanitizedTopics = this.sanitizeTopics(analysis.relatedTopics);
 
         const cleanedTitleFromLLM = this.stripPromptArtifacts(analysis.title);
         let sanitizedTitle = this.sanitizeAnalysisText(
@@ -187,7 +189,7 @@ export class EventAnalyzer {
         sanitizedDescription = this.cleanDescriptionText(sanitizedDescription);
 
         if (this.isLowQualityDescription(sanitizedDescription, sanitizedTitle)) {
-          const insightsSummary = this.buildInsightsSummary(analysis.keyInsights);
+          const insightsSummary = this.buildInsightsSummary(sanitizedInsights);
           if (insightsSummary) {
             sanitizedDescription = insightsSummary;
           } else if (cleanedFallbackDescription) {
@@ -215,8 +217,8 @@ export class EventAnalyzer {
           significance: analysis.significance,
           metadata: {
             ...event.metadata,
-            keyInsights: analysis.keyInsights,
-            relatedTopics: analysis.relatedTopics,
+            keyInsights: sanitizedInsights,
+            relatedTopics: sanitizedTopics,
             originalTitle: event.title,
             analysisProvider: provider.id,
             analysisModel: provider.model,
@@ -493,6 +495,66 @@ export class EventAnalyzer {
     return cleaned.replace(/\s+/g, ' ').trim();
   }
 
+  private sanitizeInsights(insights: string[]): string[] {
+    return this.sanitizeStringList(insights, { maxItems: 4, minWords: 4, ensureSentence: true });
+  }
+
+  private sanitizeTopics(topics: string[]): string[] {
+    return this.sanitizeStringList(topics, { maxItems: 6, minLength: 3 });
+  }
+
+  private sanitizeStringList(
+    values: unknown,
+    options: { maxItems: number; minWords?: number; minLength?: number; ensureSentence?: boolean }
+  ): string[] {
+    if (!Array.isArray(values)) {
+      return [];
+    }
+
+    const results: string[] = [];
+    const seen = new Set<string>();
+
+    for (const raw of values) {
+      if (typeof raw !== 'string') {
+        continue;
+      }
+
+      const stripped = this.stripPromptArtifacts(raw).replace(/\s+/g, ' ').trim();
+      if (!stripped) {
+        continue;
+      }
+
+      const wordCount = stripped.split(/\s+/).length;
+      if (options.minWords && wordCount < options.minWords) {
+        continue;
+      }
+
+      if (options.minLength && stripped.length < options.minLength) {
+        continue;
+      }
+
+      const key = stripped.toLowerCase();
+      if (seen.has(key)) {
+        continue;
+      }
+
+      seen.add(key);
+
+      let formatted = stripped;
+      if (options.ensureSentence && !/[.!?]$/.test(formatted)) {
+        formatted = `${formatted}.`;
+      }
+
+      results.push(formatted);
+
+      if (results.length >= options.maxItems) {
+        break;
+      }
+    }
+
+    return results;
+  }
+
   private isLowQualityDescription(description: string, title: string): boolean {
     if (!description) {
       return true;
@@ -512,7 +574,11 @@ export class EventAnalyzer {
     }
 
     const wordCount = normalizedDescription.split(/\s+/).length;
-    if (wordCount <= 5) {
+    if (wordCount < 8) {
+      return true;
+    }
+
+    if (normalizedDescription.length < 50) {
       return true;
     }
 

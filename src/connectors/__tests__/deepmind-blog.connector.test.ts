@@ -24,7 +24,10 @@ function buildConnector(): DeepMindBlogConnector {
       id: 'deepmind_blog',
       kind: 'html',
       url: `${BASE_URL}${BLOG_PATH}`,
-      enabled: true
+      enabled: true,
+      metadata: {
+        source_name: 'DeepMind Blog'
+      }
     },
     defaults: {
       timeout_ms: 15000
@@ -68,6 +71,7 @@ describe('DeepMindBlogConnector', () => {
       expect.objectContaining({
         title: 'Alpha Research Achieves New Milestone',
         source: 'deepmind_blog',
+        sourceDisplayName: 'DeepMind Blog',
         authors: ['Dr. Ada Lovelace', 'Dr. Alan Turing']
       })
     );
@@ -98,6 +102,7 @@ describe('DeepMindBlogConnector', () => {
     expect(items[0]).toEqual(
       expect.objectContaining({
         title: 'Robotics Planning with World Models',
+        sourceDisplayName: 'DeepMind Blog',
         authors: ['Jane Smith'],
         summary: 'Insights into scaling world model planning for robotics.'
       })

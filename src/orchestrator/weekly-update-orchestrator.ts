@@ -405,11 +405,16 @@ export class WeeklyUpdateOrchestrator {
 
     const summaryContent =
       item.summary && item.summary.trim().length > 0 ? item.summary.trim() : undefined;
+    const sourceId = item.source;
+    const sourceDisplayName =
+      typeof item.sourceDisplayName === 'string' && item.sourceDisplayName.trim().length > 0
+        ? item.sourceDisplayName.trim()
+        : undefined;
 
     const metadata: Record<string, unknown> = {
       ...item.metadata,
       raw_item_id: item.id,
-      source_id: item.source
+      source_id: sourceId
     };
 
     if (summaryContent) {
@@ -420,12 +425,16 @@ export class WeeklyUpdateOrchestrator {
       metadata.authors = item.authors;
     }
 
+    if (sourceDisplayName) {
+      metadata.source_display_name = sourceDisplayName;
+    }
+
     const content = summaryContent ?? item.title;
 
     return {
       title: item.title,
       date: eventDate,
-      source: item.source,
+      source: sourceDisplayName ?? sourceId,
       url: item.url,
       content,
       metadata
