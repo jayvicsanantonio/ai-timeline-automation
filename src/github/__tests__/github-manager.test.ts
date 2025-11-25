@@ -203,6 +203,56 @@ describe('GitHubManager', () => {
       );
       expect(updatedContent.trim().endsWith(']')).toBe(true);
     });
+
+    it('should sort new events chronologically before writing timeline', async () => {
+      const unorderedEvents: AnalyzedEvent[] = [
+        {
+          id: '2024-05-03-later-event',
+          title: 'Later Event',
+          date: '2024-05-03T00:00:00Z',
+          description: 'This event occurs later in the week.',
+          category: 'industry',
+          sources: ['https://example.com/later'],
+          impactScore: 9.2,
+          significance: {
+            technologicalBreakthrough: 6,
+            industryImpact: 8,
+            adoptionScale: 7,
+            novelty: 5
+          }
+        },
+        {
+          id: '2024-05-01-earlier-event',
+          title: 'Earlier Event',
+          date: '2024-05-01T00:00:00Z',
+          description: 'This event occurs earlier in the week.',
+          category: 'research',
+          sources: ['https://example.com/earlier'],
+          impactScore: 9.5,
+          significance: {
+            technologicalBreakthrough: 8,
+            industryImpact: 7,
+            adoptionScale: 6,
+            novelty: 7
+          }
+        }
+      ];
+
+      await manager.createTimelineUpdatePR(unorderedEvents, 18, 2024);
+
+      const mockOctokitInstance = (Octokit as jest.MockedClass<typeof Octokit>).mock.results[0]
+        .value;
+
+      const { content } = mockOctokitInstance.repos.createOrUpdateFileContents.mock.calls[0][0];
+      const updatedContent = Buffer.from(content, 'base64').toString('utf-8');
+
+      const earlierIndex = updatedContent.indexOf('"Earlier Event"');
+      const laterIndex = updatedContent.indexOf('"Later Event"');
+
+      expect(earlierIndex).toBeGreaterThan(-1);
+      expect(laterIndex).toBeGreaterThan(-1);
+      expect(earlierIndex).toBeLessThan(laterIndex);
+    });
   });
 
   describe('Error handling', () => {

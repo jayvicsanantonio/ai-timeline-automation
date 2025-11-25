@@ -23,6 +23,8 @@ export interface OrchestratorConfig {
   significanceThreshold?: number; // default 7.0
   githubToken?: string;
   dryRun?: boolean;
+  sourceAllowlist?: string[];
+  sourceBlocklist?: string[];
 }
 
 export interface NewsCollector {
@@ -87,7 +89,9 @@ export class WeeklyUpdateOrchestrator {
       new GitHubManager({
         owner,
         repo,
-        token: config.githubToken || process.env.GIT_TOKEN
+        token: config.githubToken || process.env.GIT_TOKEN,
+        sourceAllowlist: config.sourceAllowlist,
+        sourceBlocklist: config.sourceBlocklist
       });
 
     this.deduplication = deduplication || new DeduplicationService();

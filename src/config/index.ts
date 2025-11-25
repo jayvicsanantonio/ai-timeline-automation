@@ -16,6 +16,8 @@ const EnvSchema = z.object({
   OPENAI_API_KEY: z.string().min(1),
   GIT_TOKEN: z.string().min(1),
   TIMELINE_REPO: z.string().regex(/^[^/]+\/[^/]+$/, 'Must be in format owner/repo'),
+  SOURCE_ALLOWLIST: z.string().optional(),
+  SOURCE_BLOCKLIST: z.string().optional(),
 
   // AI Model settings
   AI_MODEL: z.string().default('gpt-4o-mini'), // OpenAI models like 'gpt-4o-mini', 'gpt-4', 'gpt-3.5-turbo'
@@ -74,6 +76,10 @@ export interface AppConfig {
   isDevelopment: boolean;
   isProduction: boolean;
   isTest: boolean;
+
+  // Source domain controls
+  sourceAllowlist: string[];
+  sourceBlocklist: string[];
 }
 
 class Configuration {
@@ -125,6 +131,12 @@ class Configuration {
       // Parse timeline repo
       const [owner, repo] = this.env.TIMELINE_REPO.split('/');
 
+      const parseList = (value?: string): string[] =>
+        (value || '')
+          .split(',')
+          .map((entry) => entry.trim().toLowerCase())
+          .filter(Boolean);
+
       // Build configuration object
       this.config = {
         aiApiKey,
@@ -146,7 +158,9 @@ class Configuration {
         nodeEnv: this.env.NODE_ENV,
         isDevelopment: this.env.NODE_ENV === 'development',
         isProduction: this.env.NODE_ENV === 'production',
-        isTest: this.env.NODE_ENV === 'test'
+        isTest: this.env.NODE_ENV === 'test',
+        sourceAllowlist: parseList(this.env.SOURCE_ALLOWLIST),
+        sourceBlocklist: parseList(this.env.SOURCE_BLOCKLIST)
       };
 
       return this.config;

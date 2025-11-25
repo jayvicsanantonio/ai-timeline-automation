@@ -575,5 +575,47 @@ describe('TimelineReader', () => {
       expect(validation.valid).toBe(false);
       expect(validation.conflicts[0]).toContain('duplicates existing timeline entry');
     });
+
+    it('should warn when sources are outside the allowlist', () => {
+      const newEvents: TimelineEntry[] = [
+        {
+          id: '2024-07-01-new-model',
+          date: '2024-07-01T00:00:00.000Z',
+          title: 'New Model Launch',
+          description: 'Description',
+          category: 'Public Releases',
+          sources: ['https://unknownsource.example/new-model'],
+          impact_score: 8
+        }
+      ];
+
+      const validation = reader.validateNewEvents(newEvents, []);
+
+      expect(validation.valid).toBe(true);
+      expect(validation.warnings).toEqual([
+        'Source domain not in allowlist for "New Model Launch": unknownsource.example'
+      ]);
+    });
+
+    it('should block events from explicitly blocked domains', () => {
+      const newEvents: TimelineEntry[] = [
+        {
+          id: '2024-08-01-questionable-source',
+          date: '2024-08-01T00:00:00.000Z',
+          title: 'Questionable Source Event',
+          description: 'Description',
+          category: 'Research Breakthroughs',
+          sources: ['https://clickbait-news.com/bad-story'],
+          impact_score: 7
+        }
+      ];
+
+      const validation = reader.validateNewEvents(newEvents, []);
+
+      expect(validation.valid).toBe(false);
+      expect(validation.conflicts).toEqual([
+        'Source domain blocked for "Questionable Source Event": clickbait-news.com'
+      ]);
+    });
   });
 });

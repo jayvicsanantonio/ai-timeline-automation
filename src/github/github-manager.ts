@@ -22,6 +22,10 @@ export interface GitHubManagerConfig {
   token?: string;
   /** Labels to add to PRs */
   defaultLabels?: string[];
+  /** Allowed source domains for timeline entries */
+  sourceAllowlist?: string[];
+  /** Blocked source domains for timeline entries */
+  sourceBlocklist?: string[];
 }
 
 /**
@@ -53,7 +57,9 @@ export class GitHubManager {
       filePath: config.filePath || 'data/timeline-events.json',
       baseBranch: config.baseBranch || 'main',
       token: config.token || process.env.GIT_TOKEN || '',
-      defaultLabels: config.defaultLabels || ['automated', 'weekly-update']
+      defaultLabels: config.defaultLabels || ['automated', 'weekly-update'],
+      sourceAllowlist: config.sourceAllowlist,
+      sourceBlocklist: config.sourceBlocklist
     };
 
     this.octokit = new Octokit({
@@ -65,7 +71,9 @@ export class GitHubManager {
       repo: this.config.repo,
       filePath: this.config.filePath,
       branch: this.config.baseBranch,
-      token: this.config.token
+      token: this.config.token,
+      sourceAllowlist: this.config.sourceAllowlist,
+      sourceBlocklist: this.config.sourceBlocklist
     });
   }
 
@@ -137,15 +145,18 @@ export class GitHubManager {
       const analyzedNewEvents = events.filter((event) =>
         newEvents.some((entry) => entry.id === event.id)
       );
+      const sortedNewEvents = [...newEvents].sort(
+        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+      );
 
       // Create or update branch
       await this.createOrUpdateBranch(branchName);
 
       // Update timeline file
-      await this.updateTimelineFile(currentTimeline, newEvents, branchName);
+      await this.updateTimelineFile(currentTimeline, sortedNewEvents, branchName);
 
       // Generate PR description
-      const description = this.generatePRDescription(events, newEvents, validation.warnings);
+      const description = this.generatePRDescription(events, sortedNewEvents, validation.warnings);
 
       // Create pull request
       const pr = await this.createPullRequest(

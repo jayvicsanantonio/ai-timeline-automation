@@ -118,7 +118,9 @@ async function main(): Promise<void> {
       maxEventsPerWeek: appConfig.maxEventsPerWeek,
       significanceThreshold: appConfig.significanceThreshold,
       githubToken: appConfig.githubToken,
-      dryRun: appConfig.dryRun
+      dryRun: appConfig.dryRun,
+      sourceAllowlist: appConfig.sourceAllowlist,
+      sourceBlocklist: appConfig.sourceBlocklist
     });
 
     // Step 3: Run the update (connectors are loaded from config at runtime)

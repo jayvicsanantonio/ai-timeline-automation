@@ -7,7 +7,13 @@ import { z } from 'zod';
 import { loadConfig } from '../config';
 import type { LLMFactoryOptions, LLMMessage, LLMProvider } from '../llm';
 import { createLLMProvider } from '../llm';
-import type { AnalyzedEvent, EventCategory, RawEvent, SignificanceScores } from '../types';
+import {
+  generateEventId,
+  type AnalyzedEvent,
+  type EventCategory,
+  type RawEvent,
+  type SignificanceScores
+} from '../types';
 
 // Schema for structured output from AI
 const AIAnalysisSchema = z.object({
@@ -201,7 +207,7 @@ export class EventAnalyzer {
         const impactScore = this.calculateImpactScore(analysis.significance);
 
         // Generate a unique ID for the event
-        const id = this.generateEventId(event.date, event.title);
+        const id = generateEventId(event.date, event.title);
 
         return {
           id,
@@ -357,20 +363,6 @@ export class EventAnalyzer {
 
     // Round to 1 decimal place
     return Math.round(score * 10) / 10;
-  }
-
-  /**
-   * Generate a unique event ID
-   */
-  private generateEventId(date: Date, title: string): string {
-    const dateStr = date.toISOString().split('T')[0];
-    const titleSlug = title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .substring(0, 30);
-
-    return `${dateStr}-${titleSlug}`;
   }
 
   private sanitizeAnalysisText(value: string, fallback: string, maxLength: number): string {

@@ -20,6 +20,10 @@ export interface TimelineReaderConfig {
   branch?: string;
   /** GitHub token for authentication */
   token?: string;
+  /** Allowed source domains */
+  sourceAllowlist?: string[];
+  /** Blocked source domains */
+  sourceBlocklist?: string[];
 }
 
 /**
@@ -50,6 +54,47 @@ type TimelineCategory = TimelineEntry['category'];
 
 const DEFAULT_CATEGORY: TimelineCategory = 'Research Breakthroughs';
 
+const DEFAULT_SOURCE_ALLOWLIST = [
+  // Official publisher domains
+  'openai.com',
+  'anthropic.com',
+  'deepmind.com',
+  'ai.googleblog.com',
+  'blog.google',
+  'microsoft.com',
+  'blogs.microsoft.com',
+  'meta.com',
+  'about.fb.com',
+  'stability.ai',
+  // Research and artifacts
+  'arxiv.org',
+  'github.com',
+  'huggingface.co',
+  // Tier-1 news/business outlets
+  'reuters.com',
+  'apnews.com',
+  'bloomberg.com',
+  'ft.com',
+  'wsj.com',
+  'nytimes.com',
+  'theguardian.com',
+  'wired.com',
+  'techcrunch.com',
+  'semianalysis.com',
+  // Science journals
+  'nature.com',
+  'sciencemag.org',
+  'ieee.org',
+  'acm.org'
+];
+
+const DEFAULT_SOURCE_BLOCKLIST = [
+  'localhost',
+  '127.0.0.1',
+  '0.0.0.0',
+  'clickbait-news.com'
+];
+
 const MONTHS: Record<string, number> = {
   january: 0,
   february: 1,
@@ -71,6 +116,8 @@ const MONTHS: Record<string, number> = {
 export class TimelineReader {
   private octokit: Octokit;
   private config: Required<TimelineReaderConfig>;
+  private sourceAllowlist: string[];
+  private sourceBlocklist: string[];
 
   constructor(config: TimelineReaderConfig) {
     this.config = {
@@ -78,12 +125,24 @@ export class TimelineReader {
       repo: config.repo,
       filePath: config.filePath || 'data/timeline-events.json',
       branch: config.branch || 'main',
-      token: config.token || process.env.GIT_TOKEN || ''
+      token: config.token || process.env.GIT_TOKEN || '',
+      sourceAllowlist: config.sourceAllowlist || [],
+      sourceBlocklist: config.sourceBlocklist || []
     };
 
     this.octokit = new Octokit({
       auth: this.config.token
     });
+
+    this.sourceAllowlist =
+      this.config.sourceAllowlist && this.config.sourceAllowlist.length > 0
+        ? this.config.sourceAllowlist
+        : DEFAULT_SOURCE_ALLOWLIST;
+
+    this.sourceBlocklist =
+      this.config.sourceBlocklist && this.config.sourceBlocklist.length > 0
+        ? this.config.sourceBlocklist
+        : DEFAULT_SOURCE_BLOCKLIST;
   }
 
   /**
@@ -464,9 +523,56 @@ export class TimelineReader {
       if (new Date(event.date) > new Date()) {
         result.warnings.push(`Event "${event.title}" has a future date: ${event.date}`);
       }
+
+      this.validateSources(event, result);
     });
 
     return result;
+  }
+
+  private validateSources(
+    event: TimelineEntry,
+    result: {
+      valid: boolean;
+      conflicts: string[];
+      warnings: string[];
+    }
+  ): void {
+    event.sources.forEach((source) => {
+      const hostname = this.extractHostname(source);
+      if (!hostname) {
+        result.warnings.push(`Invalid source URL for "${event.title}": ${source}`);
+        return;
+      }
+
+      if (this.sourceBlocklist.some((domain) => this.matchesDomain(hostname, domain))) {
+        result.conflicts.push(`Source domain blocked for "${event.title}": ${hostname}`);
+        result.valid = false;
+        return;
+      }
+
+      if (this.sourceAllowlist.length > 0 && !this.isAllowed(hostname)) {
+        const message = `Source domain not in allowlist for "${event.title}": ${hostname}`;
+        console.warn(message);
+        result.warnings.push(message);
+      }
+    });
+  }
+
+  private extractHostname(url: string): string | null {
+    try {
+      return new URL(url).hostname.toLowerCase();
+    } catch {
+      return null;
+    }
+  }
+
+  private matchesDomain(hostname: string, domain: string): boolean {
+    return hostname === domain || hostname.endsWith(`.${domain}`);
+  }
+
+  private isAllowed(hostname: string): boolean {
+    return this.sourceAllowlist.some((domain) => this.matchesDomain(hostname, domain));
   }
 
   /**
