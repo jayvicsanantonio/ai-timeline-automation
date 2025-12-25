@@ -6,10 +6,10 @@
 
 ## 2. New Ingestion Framework
 - **Connectors**
-  - `RssSourceConnector` normalises RSS feeds.
-  - `OpenAIBlogConnector` adds OpenAI-specific metadata.
-  - `DeepMindBlogConnector` scrapes HTML/JSON-LD (with fixtures + contract tests).
-  - `PapersWithCodeConnector` paginates the latest API, enforces window limits, and normalises authors/summary.
+ - `RssSourceConnector` normalises RSS feeds.
+ - `OpenAIBlogConnector` adds OpenAI-specific metadata.
+ - `DeepMindBlogConnector` scrapes HTML/JSON-LD (with fixtures + contract tests).
+ - `PapersWithCodeConnector` paginates the latest API, enforces window limits, and normalises authors/summary.
 - **Windowing**: `computeIngestionWindow()` respects `window_days`, guaranteeing deterministic runs.
 
 ## 3. Orchestrator Overhaul (`src/orchestrator/weekly-update-orchestrator.ts`)

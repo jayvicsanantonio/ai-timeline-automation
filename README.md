@@ -4,9 +4,9 @@
 [![CI](https://github.com/jayvicsanantonio/ai-timeline-automation/actions/workflows/ci.yml/badge.svg)](https://github.com/jayvicsanantonio/ai-timeline-automation/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-🤖 **Automated AI news gathering and timeline update system** that collects, analyzes, and curates significant AI developments from multiple sources into a structured timeline.
+ **Automated AI news gathering and timeline update system** that collects, analyzes, and curates significant AI developments from multiple sources into a structured timeline.
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Overview](#overview)
 - [Features](#features)
@@ -22,7 +22,7 @@
 - [Contributing](#contributing)
 - [License](#license)
 
-## 🌟 Overview
+## Overview
 
 The AI Timeline Automation System automatically:
 
@@ -33,58 +33,58 @@ The AI Timeline Automation System automatically:
 5. **Updates** a timeline repository via automated pull requests
 6. **Monitors** the entire process with comprehensive metrics and logging
 
-## ✨ Features
+## Features
 
-### 🔄 **Multi-Source Data Collection**
+### **Multi-Source Data Collection**
 
 - **DeepMind/OpenAI/Hugging Face Blogs**: Official announcements and research posts
 - **Extensible RSS/API connectors**: Enable or add new feeds in `config/sources.yaml`
 - **Extensible**: Easy to add new data sources
 
-### 🧠 **AI-Powered Analysis**
+### **AI-Powered Analysis**
 
 - **Significance Scoring**: Multi-dimensional analysis (technical, commercial, social impact)
 - **Content Categorization**: Automatic classification of developments
 - **Impact Assessment**: Breakthrough, development, research, adoption categories
 - **Smart Filtering**: Configurable significance thresholds
 
-### 🔄 **Robust Automation**
+### **Robust Automation**
 
 - **Error Handling**: Circuit breakers and retry mechanisms
 - **Rate Limiting**: Respectful API usage with backoff strategies
 - **Deduplication**: Advanced similarity detection across sources
 - **GitHub Integration**: Automated PR creation and timeline updates
 
-### 📊 **Monitoring & Observability**
+### **Monitoring & Observability**
 
 - **Structured Logging**: JSON-formatted logs with correlation IDs
 - **Metrics Collection**: Comprehensive performance and success tracking
 - **Error Tracking**: Detailed error reporting and recovery metrics
 - **Execution Summaries**: Complete workflow visibility
 
-## 🏗 Architecture
+## Architecture
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Data Sources  │    │   Processing    │    │     Output      │
-├─────────────────┤    ├─────────────────┤    ├─────────────────┤
-│ • HackerNews    │───▶│ • Collection    │───▶│ • Timeline JSON │
-│ • Vendor Blogs  │    │ • Deduplication │    │ • GitHub PR     │
-│ • RSS Feeds     │    │ • AI Analysis   │    │ • Notifications │
-└─────────────────┘    │ • Scoring       │    └─────────────────┘
-                       │ • Selection     │
-                       └─────────────────┘
+┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+│ Data Sources │ │ Processing │ │ Output │
+├─────────────────┤ ├─────────────────┤ ├─────────────────┤
+│ • HackerNews │───▶│ • Collection │───▶│ • Timeline JSON │
+│ • Vendor Blogs │ │ • Deduplication │ │ • GitHub PR │
+│ • RSS Feeds │ │ • AI Analysis │ │ • Notifications │
+└─────────────────┘ │ • Scoring │ └─────────────────┘
+ │ • Selection │
+ └─────────────────┘
 
 Core Components:
-├── 📡 Collectors/     - Data source integrations
-├── 🔄 Analyzers/      - AI-powered content analysis
-├── 📝 GitHub/         - Repository and PR management
-├── 🛠️ Utils/          - Error handling, retry, logging
-├── 🎯 Orchestrator/   - Main workflow coordination
-└── ⚙️ Config/         - Environment and settings
+├── Collectors/ - Data source integrations
+├── Analyzers/ - AI-powered content analysis
+├── GitHub/ - Repository and PR management
+├── ️ Utils/ - Error handling, retry, logging
+├── Orchestrator/ - Main workflow coordination
+└── ️ Config/ - Environment and settings
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -121,7 +121,7 @@ npm run build
 npm run update
 ```
 
-## 📦 Installation
+## Installation
 
 ### Local Development
 
@@ -152,31 +152,31 @@ npm run build
 npm start
 ```
 
-## ⚙️ Configuration
+## ️ Configuration
 
 ### Required Environment Variables
 
 ```bash
 # OpenAI Configuration
-OPENAI_API_KEY=sk-...                      # OpenAI API key (required)
-AI_MODEL=gpt-4o-mini                       # Optional, defaults to gpt-4o-mini
+OPENAI_API_KEY=sk-... # OpenAI API key (required)
+AI_MODEL=gpt-4o-mini # Optional, defaults to gpt-4o-mini
 
 # GitHub Integration
-GIT_TOKEN=ghp_...                     # GitHub personal access token
-TIMELINE_REPO=username/ai-timeline       # Target repository (owner/repo)
+GIT_TOKEN=ghp_... # GitHub personal access token
+TIMELINE_REPO=username/ai-timeline # Target repository (owner/repo)
 
 # Optional Configuration
-MAX_EVENTS_PER_WEEK=3                    # Maximum events to include per week
-SIGNIFICANCE_THRESHOLD=7.0               # Minimum significance score (0-10)
-NEWS_SOURCES=hackernews,openai_blog,rss  # Comma-separated source list
-LOG_LEVEL=info                           # Logging level (error|warn|info|debug)
-DRY_RUN=false                           # Set to true for testing without GitHub updates
+MAX_EVENTS_PER_WEEK=3 # Maximum events to include per week
+SIGNIFICANCE_THRESHOLD=7.0 # Minimum significance score (0-10)
+NEWS_SOURCES=hackernews,openai_blog,rss # Comma-separated source list
+LOG_LEVEL=info # Logging level (error|warn|info|debug)
+DRY_RUN=false # Set to true for testing without GitHub updates
 
 # Optional API Keys
-HACKERNEWS_API_KEY=...                  # HackerNews API key (if required)
+HACKERNEWS_API_KEY=... # HackerNews API key (if required)
 ```
 
-## 🎮 Usage
+## Usage
 
 ### Command Line Interface
 
@@ -188,10 +188,10 @@ npm run update
 npm run dev
 
 # Run specific commands
-npm run build          # Build TypeScript
-npm run test           # Run test suite
-npm run lint           # Lint code
-npm run typecheck      # Type checking only
+npm run build # Build TypeScript
+npm run test # Run test suite
+npm run lint # Lint code
+npm run typecheck # Type checking only
 ```
 
 ### GitHub Actions (Automated)
@@ -204,46 +204,46 @@ The system includes a pre-configured GitHub Actions workflow that runs weekly:
 # Supports manual triggers with custom parameters
 ```
 
-## 👩‍💻 Development
+## ‍ Development
 
 ### Project Structure
 
 ```
 src/
-├── analyzers/          # AI-powered content analysis
-│   ├── event-analyzer.ts
-│   └── __tests__/
-├── collectors/         # Data source integrations
-│   ├── hackernews.ts
-│   ├── arxiv.ts
-│   ├── rss.ts
-│   └── __tests__/
-├── github/            # GitHub API integration
-│   ├── github-manager.ts
-│   ├── timeline-reader.ts
-│   └── __tests__/
-├── lib/               # Core business logic
-│   ├── deduplication.ts
-│   └── __tests__/
-├── orchestrator/      # Main workflow coordination
-│   ├── weekly-update-orchestrator.ts
-│   └── __tests__/
-├── types/             # TypeScript type definitions
-│   ├── events.ts
-│   └── sources.ts
-├── utils/             # Utilities and infrastructure
-│   ├── errors.ts
-│   ├── retry.ts
-│   ├── circuit-breaker.ts
-│   ├── logger.ts
-│   ├── metrics.ts
-│   └── __tests__/
-├── config/           # Configuration management
-│   └── index.ts
-└── index.ts          # Main entry point
+├── analyzers/ # AI-powered content analysis
+│ ├── event-analyzer.ts
+│ └── __tests__/
+├── collectors/ # Data source integrations
+│ ├── hackernews.ts
+│ ├── arxiv.ts
+│ ├── rss.ts
+│ └── __tests__/
+├── github/ # GitHub API integration
+│ ├── github-manager.ts
+│ ├── timeline-reader.ts
+│ └── __tests__/
+├── lib/ # Core business logic
+│ ├── deduplication.ts
+│ └── __tests__/
+├── orchestrator/ # Main workflow coordination
+│ ├── weekly-update-orchestrator.ts
+│ └── __tests__/
+├── types/ # TypeScript type definitions
+│ ├── events.ts
+│ └── sources.ts
+├── utils/ # Utilities and infrastructure
+│ ├── errors.ts
+│ ├── retry.ts
+│ ├── circuit-breaker.ts
+│ ├── logger.ts
+│ ├── metrics.ts
+│ └── __tests__/
+├── config/ # Configuration management
+│ └── index.ts
+└── index.ts # Main entry point
 ```
 
-## 🧪 Testing
+## Testing
 
 ### Running Tests
 
@@ -261,7 +261,7 @@ npm run test:coverage
 npm test -- collectors/hackernews.test.ts
 ```
 
-## 🚀 Deployment
+## Deployment
 
 ### GitHub Actions (Recommended)
 
@@ -269,18 +269,18 @@ The project includes a complete GitHub Actions workflow:
 
 1. **Enable GitHub Actions** in your repository
 2. **Configure Secrets** in repository settings:
-   ```
-   OPENAI_API_KEY=sk-...
-   GIT_TOKEN=ghp_...  # GitHub Personal Access Token
-   ```
+ ```
+ OPENAI_API_KEY=sk-...
+ GIT_TOKEN=ghp_... # GitHub Personal Access Token
+ ```
 3. **Configure Variables**:
-   ```
-   TIMELINE_REPO=username/ai-timeline
-   NEWS_SOURCES=hackernews,arxiv,rss
-   LOG_LEVEL=info
-   ```
+ ```
+ TIMELINE_REPO=username/ai-timeline
+ NEWS_SOURCES=hackernews,arxiv,rss
+ LOG_LEVEL=info
+ ```
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -331,7 +331,7 @@ LOG_LEVEL=debug npm run update
 DRY_RUN=true LOG_LEVEL=debug npm run update
 ```
 
-## 🤝 Contributing
+## Contributing
 
 ### Getting Started
 
@@ -358,7 +358,7 @@ DRY_RUN=true LOG_LEVEL=debug npm run update
 - **Coverage**: Maintain >80% code coverage
 - **Type Safety**: No `any` types without justification
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
@@ -366,8 +366,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Questions or Issues?**
 
-- 📧 Open an [issue](../../issues)
-- 💬 Start a [discussion](../../discussions)
-- 📖 Check the [wiki](../../wiki) for additional documentation
+- Open an [issue](../../issues)
+- Start a [discussion](../../discussions)
+- Check the [wiki](../../wiki) for additional documentation
 
-**Happy Automating!** 🚀
+**Happy Automating!**

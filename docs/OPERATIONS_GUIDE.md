@@ -2,18 +2,18 @@
 
 ## 1. Prerequisites & Setup
 1. **Install dependencies**
-   ```bash
-   npm ci          # preferred for clean installs/CI
-   # or npm install
-   ```
+ ```bash
+ npm ci # preferred for clean installs/CI
+ # or npm install
+ ```
 2. **Configure repository secrets and variables** (GitHub → Settings → Secrets and variables → Actions):
-   - Secrets:
-     - `OPENAI_API_KEY`
-     - `GIT_TOKEN` (PAT or GitHub App token with contents/pulls scope)
-     - Optional: `HACKERNEWS_API_KEY`
-   - Repository variables:
-     - `TIMELINE_REPO` (e.g., `owner/repo`)
-     - Optional: `DRY_RUN`, `LOG_LEVEL`, `SUMMARY_ISSUE_NUMBER`
+ - Secrets:
+ - `OPENAI_API_KEY`
+ - `GIT_TOKEN` (PAT or GitHub App token with contents/pulls scope)
+ - Optional: `HACKERNEWS_API_KEY`
+ - Repository variables:
+ - `TIMELINE_REPO` (e.g., `owner/repo`)
+ - Optional: `DRY_RUN`, `LOG_LEVEL`, `SUMMARY_ISSUE_NUMBER`
 
 ## 2. Configuration Files
 - `config/sources.yaml` &mdash; enable/disable connectors, update URLs, tweak rate limits & `window_days`.
@@ -50,13 +50,13 @@ npm run update
 - Schedule: `cron: '0 6 * * *'` (06:00 UTC daily).
 - Manual trigger: “Actions” tab → *Daily AI Timeline Update* → *Run workflow* (inputs for `dry_run`, `max_events`, `significance_threshold`).
 - Workflow steps:
-  1. Checkout (with PAT).
-  2. Install deps, build.
-  3. Validate required secrets.
-  4. Run `npm run update` (logs to `timeline-update.log`).
-  5. Upload `execution-summary.json` + log as artefact.
-  6. Optional issue comment via `SUMMARY_ISSUE_NUMBER` variable.
-  7. On failure, opens a GitHub issue alert.
+ 1. Checkout (with PAT).
+ 2. Install deps, build.
+ 3. Validate required secrets.
+ 4. Run `npm run update` (logs to `timeline-update.log`).
+ 5. Upload `execution-summary.json` + log as artefact.
+ 6. Optional issue comment via `SUMMARY_ISSUE_NUMBER` variable.
+ 7. On failure, opens a GitHub issue alert.
 
 ## 6. Testing Commands
 - `npm run typecheck` &mdash; TypeScript validation (no emit).
@@ -87,18 +87,18 @@ npm run update
 
 ## 10. Routine Maintenance Checklist
 1. **Before merging changes**
-   - `npm run typecheck`
-   - `npm test`
-   - Dry-run (`LLM_PROVIDER=mock_llm DRY_RUN=true npm run dev`)
+ - `npm run typecheck`
+ - `npm test`
+ - Dry-run (`LLM_PROVIDER=mock_llm DRY_RUN=true npm run dev`)
 2. **After updating configs**
-   - Re-run tests.
-   - Spot-check connector outputs (fixtures if needed).
+ - Re-run tests.
+ - Spot-check connector outputs (fixtures if needed).
 3. **Monitoring**
-   - Review daily GitHub Action run (06:00 UTC).
-   - Check artefacts (`execution-summary.json`, `timeline-update.log`).
-   - If `SUMMARY_ISSUE_NUMBER` is set, read the daily comments.
+ - Review daily GitHub Action run (06:00 UTC).
+ - Check artefacts (`execution-summary.json`, `timeline-update.log`).
+ - If `SUMMARY_ISSUE_NUMBER` is set, read the daily comments.
 4. **Production validation**
-   - Periodically run full pipeline locally (with real LLM + PAT).
-   - Inspect generated `reports/<date>.md` and timeline diff before approving PRs.
+ - Periodically run full pipeline locally (with real LLM + PAT).
+ - Inspect generated `reports/<date>.md` and timeline diff before approving PRs.
 
 > Tip for new engineers: start with the dry-run command, inspect the logs and summary, then move on to the full run once secrets are in place. All runtime knobs are in `config/` or environment variables, so changing behaviour rarely requires touching the TypeScript code.
