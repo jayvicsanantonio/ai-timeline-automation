@@ -8,6 +8,7 @@ export interface RawItem {
   url: string;
   publishedAt: string;
   source: string;
+  sourceDisplayName?: string;
   summary?: string;
   authors?: string[];
   metadata?: Record<string, unknown>;

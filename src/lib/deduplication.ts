@@ -318,10 +318,18 @@ export class DeduplicationService {
     // Priority order for sources
     const sourcePriority: Record<string, number> = {
       'OpenAI Blog': 10,
+      'DeepMind Blog': 9,
       Anthropic: 9,
       'Google AI': 9,
+      'Google AI Blog': 9,
       ArXiv: 8,
+      'Meta AI Blog': 8,
+      'Gemini Product News': 8,
       'MIT Technology Review': 7,
+      'Microsoft AI Blog': 7,
+      'xAI News': 7,
+      'Hugging Face Blog': 6,
+      'Papers with Code': 6,
       'The Verge': 6,
       VentureBeat: 6,
       TechCrunch: 5,

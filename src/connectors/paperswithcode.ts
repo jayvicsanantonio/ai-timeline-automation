@@ -114,6 +114,7 @@ export class PapersWithCodeConnector extends AbstractSourceConnector {
       url: absoluteUrl,
       publishedAt,
       source: this.id,
+      sourceDisplayName: this.getSourceName(),
       summary: this.normalizeNullable(entry.summary ?? entry.description ?? entry.paper_abstract),
       authors: this.normalizeAuthors(entry),
       metadata: {

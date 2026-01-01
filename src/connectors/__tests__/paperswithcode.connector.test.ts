@@ -17,7 +17,10 @@ function buildConnector(): PapersWithCodeConnector {
       id: 'paperswithcode',
       kind: 'api',
       url: `${BASE_URL}${API_PATH}`,
-      enabled: true
+      enabled: true,
+      metadata: {
+        source_name: 'Papers with Code'
+      }
     },
     defaults: {
       timeout_ms: 15000
@@ -76,6 +79,7 @@ describe('PapersWithCodeConnector', () => {
     expect(items[0]).toEqual(
       expect.objectContaining({
         title: 'Awesome Model for Vision',
+        sourceDisplayName: 'Papers with Code',
         authors: ['Alice Example', 'Bob Example'],
         metadata: expect.objectContaining({
           repositoryUrl: 'https://github.com/example/awesome-model'

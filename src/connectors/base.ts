@@ -14,6 +14,7 @@ export abstract class AbstractSourceConnector implements SourceConnector {
   protected readonly enabled: boolean;
   protected readonly rateLimitQpm?: number;
   protected readonly timeoutMs?: number;
+  private readonly sourceDisplayName?: string;
 
   constructor({ config, defaults }: SourceConnectorInit) {
     this.id = config.id;
@@ -22,6 +23,7 @@ export abstract class AbstractSourceConnector implements SourceConnector {
     this.enabled = config.enabled ?? true;
     this.rateLimitQpm = config.rate_limit_qpm ?? defaults?.rate_limit_qpm;
     this.timeoutMs = config.timeout_ms ?? defaults?.timeout_ms;
+    this.sourceDisplayName = this.resolveSourceName(config.metadata);
   }
 
   isEnabled(): boolean {
@@ -66,5 +68,23 @@ export abstract class AbstractSourceConnector implements SourceConnector {
     } catch {
       return url;
     }
+  }
+
+  protected getSourceName(): string | undefined {
+    return this.sourceDisplayName;
+  }
+
+  private resolveSourceName(metadata?: Record<string, unknown>): string | undefined {
+    if (!metadata) {
+      return undefined;
+    }
+
+    const raw = metadata['source_name'];
+    if (typeof raw !== 'string') {
+      return undefined;
+    }
+
+    const trimmed = raw.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
   }
 }

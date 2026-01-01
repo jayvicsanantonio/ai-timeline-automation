@@ -64,6 +64,7 @@ export class RssSourceConnector extends AbstractSourceConnector {
     const sanitizedUrl = this.sanitizeUrl(item.link);
     const fingerprint = this.generateDeterministicId(`${this.id}:${sanitizedUrl}`);
     const datePrefix = new Date(publishedAt).toISOString().slice(0, 10);
+    const sourceDisplayName = this.getSourceName();
 
     return {
       id: `${datePrefix}-${this.id}-${fingerprint.slice(0, 6)}`,
@@ -71,6 +72,7 @@ export class RssSourceConnector extends AbstractSourceConnector {
       url: sanitizedUrl,
       publishedAt,
       source: this.id,
+      sourceDisplayName,
       summary: item.contentSnippet?.trim(),
       authors: this.extractAuthors(item)
     };

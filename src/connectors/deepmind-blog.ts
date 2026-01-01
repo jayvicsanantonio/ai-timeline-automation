@@ -188,6 +188,7 @@ export class DeepMindBlogConnector extends AbstractSourceConnector {
 
   private extractFromArticles($: CheerioAPI): RawItem[] {
     const results: RawItem[] = [];
+    const sourceDisplayName = this.getSourceName();
 
     $('article').each((_, element) => {
       const article = $(element);
@@ -214,6 +215,7 @@ export class DeepMindBlogConnector extends AbstractSourceConnector {
         url: absoluteUrl,
         publishedAt,
         source: this.id,
+        sourceDisplayName,
         summary: summary ? this.normalizeWhitespace(summary) : undefined,
         authors: this.normalizeAuthorList(authorsText)
       });
@@ -269,6 +271,7 @@ export class DeepMindBlogConnector extends AbstractSourceConnector {
     const fingerprint = this.generateDeterministicId(`${this.id}:${absoluteUrl}`);
     const publishedAt = this.resolvePublishedAt(publishedAtRaw);
     const datePrefix = new Date(publishedAt).toISOString().slice(0, 10);
+    const sourceDisplayName = this.getSourceName();
 
     return {
       id: `${datePrefix}-${this.id}-${fingerprint.slice(0, 6)}`,
@@ -276,6 +279,7 @@ export class DeepMindBlogConnector extends AbstractSourceConnector {
       url: absoluteUrl,
       publishedAt,
       source: this.id,
+      sourceDisplayName,
       summary: this.normalizeNullable(node.description ?? node.abstract),
       authors: this.normalizeJsonLdAuthors(node.author ?? node.creator)
     };
