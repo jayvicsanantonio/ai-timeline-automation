@@ -36,15 +36,15 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@ai-sdk/openai": "^2.0.19",
+    "@ai-sdk/openai": "^3.0.71",
     "@octokit/rest": "^20.0.2",
-    "ai": "^5.0.48",
+    "ai": "^6.0.205",
     "cheerio": "^1.0.0",
     "dotenv": "^16.3.1",
     "openai": "^4.52.0",
     "rss-parser": "^3.13.0",
     "xml2js": "^0.6.2",
-    "yaml": "^2.8.1",
+    "yaml": "^2.8.3",
     "zod": "^3.22.4"
   },
   "devDependencies": {
@@ -55,7 +55,7 @@
     "jest": "^29.7.0",
     "madge": "^8.0.0",
     "ts-jest": "^29.1.1",
-    "tsx": "^4.7.0",
+    "tsx": "^4.22.4",
     "typescript": "^5.3.3"
   },
   "engines": {
